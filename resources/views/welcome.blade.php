@@ -305,5 +305,18 @@
       <div class="br-cookiebar default d-none" tabindex="-1"></div>
     </div>
     <script src="../../../core-init.js"></script>
+
+    <x-botao tipo="primary" tamanho="large">
+        Enviar
+    </x-botao>
+
+    <x-botao href="https://gov.br" tipo="secondary" tamanho="large">
+        Ir para o Gov.BR
+    </x-botao>
+
+    <x-botao action="salvarUsuario" tipo="danger">
+        Salvar
+    </x-botao>
+
   </body>
 </html>
