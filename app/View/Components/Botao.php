@@ -2,6 +2,8 @@
 
 namespace App\View\Components;
 
+use Closure;
+use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 class Botao extends Component
@@ -12,6 +14,7 @@ class Botao extends Component
     public string $classeExtra;
     public ?string $href;
     public ?string $action;
+    public string $ds;
 
     public function __construct(
         string $tipo = 'primary',
@@ -27,10 +30,12 @@ class Botao extends Component
         $this->classeExtra = $classeExtra;
         $this->href = $href;
         $this->action = $action;
+        $this->ds = config('design.system');
     }
 
-    public function render()
+    public function render(): View
     {
-        return view('components.botao');
+        $theme = config('design.system');
+        return view('components.' . $theme . '.botao');
     }
 }
