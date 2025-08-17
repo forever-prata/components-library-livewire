@@ -14,6 +14,8 @@
   </head>
   <body>
 
+    {{-- Blade Components (Comentados para referência) --}}
+    {{--
     <x-botao tipo="primary" tamanho="large">
         Enviar
     </x-botao>
@@ -25,6 +27,14 @@
     <x-botao action="salvarUsuario" tipo="danger">
         Salvar
     </x-botao>
+    --}}
+
+    {{-- Livewire Components --}}
+    <livewire:botao tipo="primary" tamanho="large" label="Enviar" />
+
+    <livewire:botao href="https://gov.br" tipo="secondary" tamanho="large" label="Ir para o Gov.BR" />
+
+    <livewire:botao action="salvarUsuario" tipo="danger" label="Salvar" />
 
   </body>
 </html>
