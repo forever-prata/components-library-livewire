@@ -13,28 +13,20 @@
     <title>Padrão Digital de Governo</title>
   </head>
   <body>
-
-    {{-- Blade Components (Comentados para referência) --}}
-    {{--
-    <x-botao tipo="primary" tamanho="large">
-        Enviar
-    </x-botao>
-
-    <x-botao href="https://gov.br" tipo="secondary" tamanho="large">
-        Ir para o Gov.BR
-    </x-botao>
-
-    <x-botao action="salvarUsuario" tipo="danger">
-        Salvar
-    </x-botao>
-    --}}
-
     {{-- Livewire Components --}}
     <livewire:botao tipo="primary" tamanho="large" label="Enviar" />
 
     <livewire:botao href="https://gov.br" tipo="secondary" tamanho="large" label="Ir para o Gov.BR" />
 
     <livewire:botao action="salvarUsuario" tipo="danger" label="Salvar" />
+
+    <div style="max-width: 500px; margin-top: 20px;">
+        <livewire:input name="nome" label="Nome Completo" placeholder="Digite seu nome" />
+
+        <livewire:input type="password" name="senha" label="Senha" placeholder="Digite sua senha" />
+
+        <livewire:input type="email" name="email" label="Email" placeholder="seu@email.com" wireModel="email" />
+    </div>
 
   </body>
 </html>
