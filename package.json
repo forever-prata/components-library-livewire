@@ -2,18 +2,27 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "vite build"
-    },
-    "devDependencies": {
-        "@popperjs/core": "^2.11.8",
-        "axios": "^1.6.4",
-        "bootstrap": "^5.3.7",
-        "laravel-vite-plugin": "^1.0.0",
-        "vite": "^5.4.16"
+        "build": "vite build",
+        "dev": "vite"
     },
     "dependencies": {
-        "@govbr-ds/core": "^3.6.1",
-        "materialize-css": "^1.0.0-rc.2"
+        "@govbr-ds/core": "^3.1.1",
+        "@tailwindcss/vite": "^4.1.11",
+        "autoprefixer": "^10.4.20",
+        "axios": "^1.7.4",
+        "bootstrap": "^5.3.3",
+        "concurrently": "^9.0.1",
+        "laravel-vite-plugin": "^2.0",
+        "materialize-css": "^1.0.0",
+        "tailwindcss": "^4.0.7",
+        "vite": "^7.0.4"
+    },
+    "devDependencies": {
+        "sass": "^1.77.4"
+    },
+    "optionalDependencies": {
+        "@rollup/rollup-linux-x64-gnu": "4.9.5",
+        "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
+        "lightningcss-linux-x64-gnu": "^1.29.1"
     }
 }

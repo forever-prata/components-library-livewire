@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     {{-- Carrega o CSS do tema ativo --}}
-        @vite(['resources/css/themes/' . config('design.system') . '.css'])
+        @vite(['resources/css/themes/' . config('design.system') . '.css', 'resources/js/app.js'])
 
         <!-- Fonts -->
     <!-- Fontawesome-->
@@ -26,6 +26,30 @@
         <livewire:input type="password" name="senha" label="Senha" placeholder="Digite sua senha" />
 
         <livewire:input type="email" name="email" label="Email" placeholder="seu@email.com" wireModel="email" />
+
+        <livewire:checkbox name="lembrar" label="Lembrar de mim" />
+        <livewire:checkbox name="termos" label="Aceito os termos" checked="true" />
+
+        <p>Selecione uma opção:</p>
+        <livewire:radio name="opcao" label="Opção 1" value="opcao1" id="opcao1" />
+        <livewire:radio name="opcao" label="Opção 2" value="opcao2" id="opcao2" checked="true" />
+        <livewire:radio name="opcao" label="Opção 3" value="opcao3" id="opcao3" />
+
+        <div class="mt-4">
+            <div class="row align-items-end">
+                    @livewire('select', [
+                        'name' => 'select_simple',
+                        'label' => 'Select Simples',
+                        'id' => 'select_simple',
+                        'options' => [
+                            '1' => 'Opção 1',
+                            '2' => 'Opção 2',
+                            '3' => 'Opção 3',
+                        ]
+                    ])
+            </div>
+        </div>
+
     </div>
 
   </body>

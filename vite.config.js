@@ -10,6 +10,8 @@ export default defineConfig({
                 'resources/css/themes/govbr.css',
                 'resources/css/themes/bootstrap.css',
                 'resources/css/themes/materialize.css',
+                'node_modules/@govbr-ds/core/dist/core-init.js',
+                'node_modules/@govbr-ds/core/dist/core.min.js',
             ],
             refresh: true,
         }),
