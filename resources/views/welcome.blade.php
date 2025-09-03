@@ -49,7 +49,17 @@
                     ])
             </div>
         </div>
-
+        <livewire:table
+            :headers="['Nome', 'Idade', 'Cidade']"
+            :rows="[
+                ['Bruno', 25, 'Rio do Sul'],
+                ['Ana', 30, 'Florianópolis']
+            ]"
+            titulo="Usuários"
+            :busca="true"
+            :selecionavel="true"
+            classeExtra="striped"
+        />
     </div>
 
   </body>
