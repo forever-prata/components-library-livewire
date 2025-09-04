@@ -58,23 +58,39 @@
     </thead>
 
     <tbody>
-      @foreach($rows as $i => $row)
-        <tr>
-          @if($selecionavel)
-            <td>
-              <div class="br-checkbox hidden-label">
-                <input id="check-line-{{ $i }}-{{ $random }}" type="checkbox"
-                       aria-label="Selecionar linha {{ $i + 1 }}"/>
-                <label for="check-line-{{ $i }}-{{ $random }}">Selecionar linha {{ $i + 1 }}</label>
-              </div>
-            </td>
-          @endif
+        @foreach($rows as $i => $row)
+          <tr>
+            @if($selecionavel)
+              <td>
+                <div class="br-checkbox hidden-label">
+                  <input id="check-line-{{ $i }}-{{ $random }}" type="checkbox"
+                         aria-label="Selecionar linha {{ $i + 1 }}"/>
+                  <label for="check-line-{{ $i }}-{{ $random }}">Selecionar linha {{ $i + 1 }}</label>
+                </div>
+              </td>
+            @endif
 
-          @foreach($row as $index => $cell)
-            <td data-th="{{ $headers[$index] ?? '' }}">{{ $cell }}</td>
-          @endforeach
-        </tr>
-      @endforeach
-    </tbody>
+            {{-- Células normais + ações --}}
+            @foreach($row as $index => $cell)
+              <td data-th="{{ $headers[$index] ?? '' }}">
+                @if(is_array($cell) && isset($cell['show'], $cell['edit'], $cell['delete']))
+                  <livewire:botao tipo="secondary" tamanho="small" label="Show" :href="$cell['show']" />
+                  <livewire:botao tipo="secondary" tamanho="small" label="Edit" :href="$cell['edit']" />
+
+                  <form action="{{ $cell['delete'] }}" method="POST"
+                        onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                    @csrf
+                    @method('DELETE')
+                    <livewire:botao tipo="danger" tamanho="small" label="Delete" type="submit" />
+                  </form>
+                @else
+                  {{ $cell }}
+                @endif
+              </td>
+            @endforeach
+          </tr>
+        @endforeach
+      </tbody>
+
   </table>
 </div>
