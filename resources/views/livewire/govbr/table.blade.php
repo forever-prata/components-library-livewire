@@ -73,19 +73,19 @@
             {{-- Células normais + ações --}}
             @foreach($row as $index => $cell)
               <td data-th="{{ $headers[$index] ?? '' }}">
-                @if(is_array($cell) && isset($cell['show'], $cell['edit'], $cell['delete']))
-                  <livewire:botao tipo="secondary" tamanho="small" label="Show" :href="$cell['show']" />
-                  <livewire:botao tipo="secondary" tamanho="small" label="Edit" :href="$cell['edit']" />
-
-                  <form action="{{ $cell['delete'] }}" method="POST"
-                        onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                @if(is_array($cell) && isset($cell['show']))
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <livewire:botao tipo="secondary" tamanho="small" :href="$cell['show']" label="Show" />
+                <livewire:botao tipo="secondary" tamanho="small" :href="$cell['edit']" label="Edit" />
+                <form action="{{ $cell['delete'] }}" method="POST" onsubmit="return confirm('Tem certeza?');">
                     @csrf
                     @method('DELETE')
                     <livewire:botao tipo="danger" tamanho="small" label="Delete" type="submit" />
-                  </form>
-                @else
-                  {{ $cell }}
-                @endif
+                </form>
+            </div>
+        @else
+            {{ $cell }}
+        @endif
               </td>
             @endforeach
           </tr>

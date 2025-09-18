@@ -1,3 +1,4 @@
+{{-- gerado automaticamente pela biblioteca --}}
 @extends('layouts.scaffold')
 
 @section('content')
@@ -8,12 +9,10 @@
         </div>
 
         <livewire:table
-            :headers="$headers"
-            :rows="$rows"
+            :collection="$collection"
             :busca="true"
-            :selecionavel="true"
+            :selecionavel="false"
             titulo="Produtos"
         />
-
     </div>
 @endsection

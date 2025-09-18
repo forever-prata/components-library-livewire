@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     {{-- Carrega o CSS do tema ativo --}}
-        @vite(['resources/css/themes/' . config('design.system') . '.css', 'resources/js/app.js'])
+                @php
+            $viteAssets = ['resources/css/themes/' . config('design.system') . '.css', 'resources/js/app.js'];
+            if (config('design.system') !== 'materialize') {
+                array_unshift($viteAssets, 'resources/css/app.css');
+            }
+        @endphp
+        @vite($viteAssets)
 
         <!-- Fonts -->
     <!-- Fontawesome-->

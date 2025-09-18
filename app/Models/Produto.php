@@ -1,5 +1,7 @@
 <?php
 
+// gerado automaticamente pela biblioteca
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +15,6 @@ class Produto extends Model
         'name',
         'description',
         'price',
-        'in_stock',
+        'in_stock'
     ];
 }

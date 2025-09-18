@@ -56,7 +56,7 @@ class MakeScaffoldCommand extends Command
         $this->info("Model: {$modelName}, Controller: {$modelName}Controller, Route: {$resourceName}");
 
         $this->generateModel($modelName, $columns);
-        $this->generateController($modelName);
+        $this->generateController($modelName, $tableName, $columns);
         $this->addRoute($tableName, $modelName);
         $this->generateViews($tableName, $columns);
 
@@ -143,6 +143,8 @@ class MakeScaffoldCommand extends Command
         $template = <<<EOT
         <?php
 
+        // gerado automaticamente pela biblioteca
+
         namespace App\Models;
 
         use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -163,18 +165,128 @@ class MakeScaffoldCommand extends Command
         $this->line("Model '{$modelName}' created successfully with HasFactory and fillable property.");
     }
 
-    protected function generateController($modelName)
+    protected function generateController($modelName, $tableName, $columns)
     {
-        Artisan::call('make:controller', [
-            'name' => "{$modelName}Controller",
-            '--resource' => true
-        ], $this->getOutput());
-        $this->line("Controller '{$modelName}Controller' created.");
+        $controllerPath = app_path("Http/Controllers/{$modelName}Controller.php");
+        $controllerContent = $this->getControllerContent($modelName, $tableName, $columns);
+
+        File::put($controllerPath, $controllerContent);
+        $this->line("Controller '{$modelName}Controller' created with resource methods.");
+    }
+
+    protected function getControllerContent($modelName, $tableName, $columns)
+    {
+        $modelVariable = Str::camel($modelName);
+        $modelNamespace = "App\Models\\{$modelName}";
+
+        $validationRules = [];
+        foreach (array_keys($columns) as $column) {
+            // Simple validation rule, can be expanded
+            $validationRules[] = "'{$column}' => 'required'";
+        }
+        $validationRulesString = implode(",\n            ", $validationRules);
+
+        return <<<EOT
+        <?php
+
+        // gerado automaticamente pela biblioteca
+
+        namespace App\Http\Controllers;
+
+        use {$modelNamespace};
+        use Illuminate\Http\Request;
+        use Illuminate\Support\Str;
+
+        class {$modelName}Controller extends Controller
+        {
+            /**
+             * Display a listing of the resource.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function index()
+            {
+                \$collection = {$modelName}::all();
+                return view('{$tableName}.index', compact('collection'));
+            }
+
+            /**
+             * Show the form for creating a new resource.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function create()
+            {
+                return view('{$tableName}.create');
+            }
+
+            /**
+             * Store a newly created resource in storage.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function store(Request \$request)
+            {
+                \$request->validate([
+                    {$validationRulesString}
+                ]);
+
+                {$modelName}::create(\$request->all());
+
+                return redirect()->route('{$tableName}.index')
+                    ->with('success', '{$modelName} created successfully.');
+            }
+
+            /**
+             * Display the specified resource.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function show({$modelName} \${$modelVariable})
+            {
+                return view('{$tableName}.show', compact('{$modelVariable}'));
+            }
+
+            /**
+             * Show the form for editing the specified resource.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function edit({$modelName} \${$modelVariable})
+            {
+                return view('{$tableName}.edit', compact('{$modelVariable}'));
+            }
+
+            /**
+             * Update the specified resource in storage.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function update(Request \$request, {$modelName} \${$modelVariable})
+            {
+                \$request->validate([
+                    {$validationRulesString}
+                ]);
+
+                \${$modelVariable}->update(\$request->all());
+
+                return redirect()->route('{$tableName}.index')
+                    ->with('success', '{$modelName} updated successfully.');
+            }
+
+            /**
+             * Remove the specified resource from storage.
+             * // Gerado automaticamente pela biblioteca
+             */
+            public function destroy({$modelName} \${$modelVariable})
+            {
+                \${$modelVariable}->delete();
+
+                return redirect()->route('{$tableName}.index')
+                    ->with('success', '{$modelName} deleted successfully.');
+            }
+        }
+        EOT;
     }
 
     protected function addRoute($tableName, $modelName)
     {
-        $route = "Route::resource('{$tableName}', App\\Http\\Controllers\\{$modelName}Controller::class);" . PHP_EOL;
+        $route = "
+            Route::resource('{$tableName}', App\\Http\\Controllers\\{$modelName}Controller::class); // gerado automaticamente pela biblioteca" . PHP_EOL;
         File::append(base_path('routes/web.php'), $route);
         $this->line("Route for '{$tableName}' added to web.php.");
     }
@@ -185,9 +297,9 @@ class MakeScaffoldCommand extends Command
         File::makeDirectory($viewPath, 0755, true, true);
 
         $this->generateIndexView($viewPath, $tableName, $columns);
-        //$this->generateCreateView($viewPath, $tableName, $columns);
-        //$this->generateEditView($viewPath, $tableName, $columns);
-        //$this->generateShowView($viewPath, $tableName, $columns);
+        $this->generateCreateView($viewPath, $tableName, $columns);
+        $this->generateEditView($viewPath, $tableName, $columns);
+        $this->generateShowView($viewPath, $tableName, $columns);
 
         $this->line("Views created in resources/views/{$tableName}/");
     }
@@ -197,6 +309,7 @@ class MakeScaffoldCommand extends Command
         $title = Str::ucfirst($tableName);
 
         $content = <<<EOT
+        {{-- gerado automaticamente pela biblioteca --}}
         @extends('layouts.scaffold')
 
         @section('content')
@@ -207,10 +320,9 @@ class MakeScaffoldCommand extends Command
                 </div>
 
                 <livewire:table
-                    :headers="\$headers"
-                    :rows="\$rows"
+                    :collection="\$collection"
                     :busca="true"
-                    :selecionavel="true"
+                    :selecionavel="false"
                     titulo="{$title}"
                 />
             </div>
@@ -222,16 +334,78 @@ class MakeScaffoldCommand extends Command
 
     protected function generateCreateView($path, $tableName, $columns)
     {
+        $title = Str::ucfirst(Str::singular($tableName));
+        $formFields = '';
+        foreach ($columns as $name => $type) {
+            $label = Str::ucfirst(str_replace('_', ' ', $name));
+            if ($type === 'checkbox') {
+                 $formFields .= "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', true)\" />\n                ";
+            } else {
+                 $formFields .= "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}') }}\" />\n                ";
+            }
+        }
 
+        $content = <<<EOT
+        {{-- gerado automaticamente pela biblioteca --}}
+        @extends('layouts.scaffold')
+
+        @section('content')
+            <div class="container mt-5">
+                <h1 class="mb-4">Create New {$title}</h1>
+                <form action="{{ route('{$tableName}.store') }}" method="POST">
+                    @csrf
+                    {$formFields}
+                    <div class="mt-4">
+                        <livewire:botao tipo="primary" label="Save" action="submit" />
+                        <livewire:botao tipo="secondary" label="Back" href="{{ route('{$tableName}.index') }}" />
+                    </div>
+                </form>
+            </div>
+        @endsection
+        EOT;
+
+        File::put("{$path}/create.blade.php", $content);
     }
 
     protected function generateEditView($path, $tableName, $columns)
     {
+        $title = Str::ucfirst(Str::singular($tableName));
+        $modelVariable = Str::singular($tableName);
+        $formFields = '';
+        foreach ($columns as $name => $type) {
+            $label = Str::ucfirst(str_replace('_', ' ', $name));
+            if ($type === 'checkbox') {
+                $formFields .= "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', \${\$modelVariable}->{$name})\" />\n                    ";
+            } else {
+                $formFields .= "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}', \${\$modelVariable}->{$name}) }}\" />\n                    ";
+            }
+        }
 
+        $content = <<<EOT
+        {{-- gerado automaticamente pela biblioteca --}}
+        @extends('layouts.scaffold')
+
+        @section('content')
+            <div class="container mt-5">
+                <h1 class="mb-4">Edit {$title}</h1>
+                <form action="{{ route('{$tableName}.update', \${\$modelVariable}->id) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+                    {$formFields}
+                    <div class="mt-4">
+                        <livewire:botao tipo="primary" label="Update" action="submit" />
+                        <livewire:botao tipo="secondary" label="Back" href="{{ route('{$tableName}.index') }}" />
+                    </div>
+                </form>
+            </div>
+        @endsection
+        EOT;
+
+        File::put("{$path}/edit.blade.php", $content);
     }
 
     protected function generateShowView($path, $tableName, $columns)
     {
-
+        //
     }
 }

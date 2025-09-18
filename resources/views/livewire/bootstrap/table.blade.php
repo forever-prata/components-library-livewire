@@ -12,23 +12,19 @@
                 <tr>
                     @foreach($row as $index => $cell)
                         <td>
-                            @if(is_array($cell) && isset($cell['show'], $cell['edit'], $cell['delete']))
-                                {{-- Botão Show --}}
-                                <livewire:botao tipo="secondary" tamanho="small" label="Show" :href="$cell['show']" />
-
-                                {{-- Botão Edit --}}
-                                <livewire:botao tipo="secondary" tamanho="small" label="Edit" :href="$cell['edit']" />
-
-                                {{-- Botão Delete --}}
-                                <form action="{{ $cell['delete'] }}" method="POST"
-                                      onsubmit="return confirm('Are you sure?');" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <livewire:botao tipo="danger" tamanho="small" label="Delete" type="submit" />
-                                </form>
-                            @else
-                                {{ $cell }}
-                            @endif
+                            @if(is_array($cell) && isset($cell['show']))
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <livewire:botao tipo="secondary" tamanho="small" :href="$cell['show']" label="Show" />
+                <livewire:botao tipo="secondary" tamanho="small" :href="$cell['edit']" label="Edit" />
+                <form action="{{ $cell['delete'] }}" method="POST" onsubmit="return confirm('Tem certeza?');">
+                    @csrf
+                    @method('DELETE')
+                    <livewire:botao tipo="danger" tamanho="small" label="Delete" type="submit" />
+                </form>
+            </div>
+        @else
+            {{ $cell }}
+        @endif
                         </td>
                     @endforeach
                 </tr>

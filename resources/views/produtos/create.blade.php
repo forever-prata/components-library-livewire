@@ -1,28 +1,20 @@
+{{-- gerado automaticamente pela biblioteca --}}
 @extends('layouts.scaffold')
 
 @section('content')
     <div class="container mt-5">
-        <h1>Create New Item</h1>
-
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
+        <h1 class="mb-4">Create New Produto</h1>
         <form action="{{ route('produtos.store') }}" method="POST">
             @csrf
-            <div class="mb-3"><livewire:input type="text" name="name" id="produtos_name" label="Name" placeholder="Enter Name" /></div>
-            <div class="mb-3"><livewire:input type="textarea" name="description" id="produtos_description" label="Description" placeholder="Enter Description" /></div>
-            <div class="mb-3"><livewire:input type="number" name="price" id="produtos_price" label="Price" placeholder="Enter Price" /></div>
-            <div class="mb-3"><livewire:checkbox name="in_stock" id="produtos_in_stock" label="In stock" /></div>
-
-            <livewire:botao tipo="submit" label="Save" />
-            <livewire:botao tipo="button" label="Back" href="{{ route('produtos.index') }}" />
+            <livewire:input type="text" name="name" label="Name" id="name" value="{{ old('name') }}" />
+                <livewire:input type="textarea" name="description" label="Description" id="description" value="{{ old('description') }}" />
+                <livewire:input type="number" name="price" label="Price" id="price" value="{{ old('price') }}" />
+                <livewire:checkbox name="in_stock" label="In stock" id="in_stock" :checked="old('in_stock', true)" />
+                
+            <div class="mt-4">
+                <livewire:botao tipo="primary" label="Save" action="submit" />
+                <livewire:botao tipo="secondary" label="Back" href="{{ route('produtos.index') }}" />
+            </div>
         </form>
     </div>
 @endsection
