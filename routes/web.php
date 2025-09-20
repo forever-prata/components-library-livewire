@@ -21,6 +21,4 @@ Route::middleware(['auth'])->group(function () {
 
 require __DIR__.'/auth.php';
 
-            Route::resource('produtos', App\Http\Controllers\ProdutoController::class); // gerado automaticamente pela biblioteca
-
-            Route::resource('produtos', App\Http\Controllers\ProdutoController::class); // gerado automaticamente pela biblioteca
+Route::resource('produtos', App\Http\Controllers\ProdutoController::class); // gerado automaticamente pela biblioteca

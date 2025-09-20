@@ -12,7 +12,7 @@
                 <livewire:checkbox name="in_stock" label="In stock" id="in_stock" :checked="old('in_stock', true)" />
                 
             <div class="mt-4">
-                <livewire:botao tipo="primary" label="Save" action="submit" />
+                <livewire:botao tipo="primary" label="Save" tipoBotao="submit" />
                 <livewire:botao tipo="secondary" label="Back" href="{{ route('produtos.index') }}" />
             </div>
         </form>

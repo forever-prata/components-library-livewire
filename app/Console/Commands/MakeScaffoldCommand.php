@@ -9,23 +9,9 @@ use Illuminate\Support\Str;
 
 class MakeScaffoldCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'make:scaffold {migration : The name of the migration file (e.g., 2025_09_03_142650_create_produtos_table)}';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Scaffold a full CRUD resource from a migration file, using Livewire components for views.';
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $migrationFileName = $this->argument('migration');
@@ -90,10 +76,8 @@ class MakeScaffoldCommand extends Command
     protected function getColumnsFromMigration($content)
     {
         $columns = [];
-        //  regex $table->string('column_name') type and name.
         if (preg_match_all('/\$table->(\w+)\(\'([a-zA-Z0-9_]+)\'/i', $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
-                // $match[1] type , $match[2] name
                 if (!in_array($match[2], ['id', 'timestamps', 'remember_token', 'created_at', 'updated_at'])) {
                     $columns[$match[2]] = $this->mapColumnTypeToInputType($match[1]);
                 }
@@ -117,7 +101,6 @@ class MakeScaffoldCommand extends Command
             case 'unsignedbiginteger':
             case 'smallinteger':
             case 'tinyinteger':
-                return 'number';
             case 'decimal':
             case 'double':
             case 'float':
@@ -140,7 +123,7 @@ class MakeScaffoldCommand extends Command
     {
         $fillable_string = implode("',\n        '", array_keys($columns));
 
-        $template = <<<EOT
+        $template = <<<'EOT'
         <?php
 
         // gerado automaticamente pela biblioteca
@@ -150,15 +133,18 @@ class MakeScaffoldCommand extends Command
         use Illuminate\Database\Eloquent\Factories\HasFactory;
         use Illuminate\Database\Eloquent\Model;
 
-        class {$modelName} extends Model
+        class MODELNAME extends Model
         {
             use HasFactory;
 
-            protected \$fillable = [
-                '{$fillable_string}'
+            protected $fillable = [
+                'FILLABLES'
             ];
         }
         EOT;
+
+        $template = str_replace('MODELNAME', $modelName, $template);
+        $template = str_replace('FILLABLES', $fillable_string, $template);
 
         $modelPath = app_path("Models/{$modelName}.php");
         File::put($modelPath, $template);
@@ -176,117 +162,124 @@ class MakeScaffoldCommand extends Command
 
     protected function getControllerContent($modelName, $tableName, $columns)
     {
-        $modelVariable = Str::camel($modelName);
-        $modelNamespace = "App\Models\\{$modelName}";
 
-        $validationRules = [];
-        foreach (array_keys($columns) as $column) {
-            // Simple validation rule, can be expanded
-            $validationRules[] = "'{$column}' => 'required'";
+    $modelVariable = Str::camel($modelName);
+    $modelNamespace = "App\\Models\\{$modelName}";
+
+    $validationRules = [];
+    foreach ($columns as $column => $type) {
+        if ($type !== 'checkbox') {
+            $validationRules[] = "            '{$column}' => 'required',";
         }
-        $validationRulesString = implode(",\n            ", $validationRules);
-
-        return <<<EOT
-        <?php
-
-        // gerado automaticamente pela biblioteca
-
-        namespace App\Http\Controllers;
-
-        use {$modelNamespace};
-        use Illuminate\Http\Request;
-        use Illuminate\Support\Str;
-
-        class {$modelName}Controller extends Controller
-        {
-            /**
-             * Display a listing of the resource.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function index()
-            {
-                \$collection = {$modelName}::all();
-                return view('{$tableName}.index', compact('collection'));
-            }
-
-            /**
-             * Show the form for creating a new resource.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function create()
-            {
-                return view('{$tableName}.create');
-            }
-
-            /**
-             * Store a newly created resource in storage.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function store(Request \$request)
-            {
-                \$request->validate([
-                    {$validationRulesString}
-                ]);
-
-                {$modelName}::create(\$request->all());
-
-                return redirect()->route('{$tableName}.index')
-                    ->with('success', '{$modelName} created successfully.');
-            }
-
-            /**
-             * Display the specified resource.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function show({$modelName} \${$modelVariable})
-            {
-                return view('{$tableName}.show', compact('{$modelVariable}'));
-            }
-
-            /**
-             * Show the form for editing the specified resource.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function edit({$modelName} \${$modelVariable})
-            {
-                return view('{$tableName}.edit', compact('{$modelVariable}'));
-            }
-
-            /**
-             * Update the specified resource in storage.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function update(Request \$request, {$modelName} \${$modelVariable})
-            {
-                \$request->validate([
-                    {$validationRulesString}
-                ]);
-
-                \${$modelVariable}->update(\$request->all());
-
-                return redirect()->route('{$tableName}.index')
-                    ->with('success', '{$modelName} updated successfully.');
-            }
-
-            /**
-             * Remove the specified resource from storage.
-             * // Gerado automaticamente pela biblioteca
-             */
-            public function destroy({$modelName} \${$modelVariable})
-            {
-                \${$modelVariable}->delete();
-
-                return redirect()->route('{$tableName}.index')
-                    ->with('success', '{$modelName} deleted successfully.');
-            }
-        }
-        EOT;
     }
+    $validationRulesString = implode("\n", $validationRules);
+
+    $checkboxHandling = '';
+    $hasCheckboxes = false;
+    foreach ($columns as $column => $type) {
+        if ($type === 'checkbox') {
+            $hasCheckboxes = true;
+            break;
+        }
+    }
+
+    if ($hasCheckboxes) {
+        $checkboxHandling = "        \$data = \$request->all();\n";
+        foreach ($columns as $column => $type) {
+            if ($type === 'checkbox') {
+                $checkboxHandling .= "        \$data['{$column}'] = \$request->has('{$column}');\n";
+            }
+        }
+    }
+
+    $createCall = $hasCheckboxes ? "{$modelName}::create(\$data);" : "{$modelName}::create(\$request->all());";
+    $updateCall = $hasCheckboxes ? "\${$modelVariable}->update(\$data);" : "\${$modelVariable}->update(\$request->all());";
+
+    $template = <<<'EOT'
+<?php
+
+// gerado automaticamente pela biblioteca
+
+namespace App\Http\Controllers;
+
+use MODELNAMESPACE;
+use Illuminate\Http\Request;
+
+class MODELNAMEController extends Controller
+{
+    public function index()
+    {
+        $collection = MODELNAME::all();
+        return view('TABLENAME.index', compact('collection'));
+    }
+
+    public function create()
+    {
+        return view('TABLENAME.create');
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+VALIDATIONRULES
+        ]);
+
+CHECKBOXHANDLING
+CREATECALL
+
+        return redirect()->route('TABLENAME.index')
+            ->with('success', 'MODELNAME created successfully.');
+    }
+
+    public function show(MODELNAME $MODELVARIABLE)
+    {
+        return view('TABLENAME.show', compact('MODELVARIABLE'));
+    }
+
+    public function edit(MODELNAME $MODELVARIABLE)
+    {
+        return view('TABLENAME.edit', compact('MODELVARIABLE'));
+    }
+
+    public function update(Request $request, MODELNAME $MODELVARIABLE)
+    {
+        $request->validate([
+VALIDATIONRULES
+        ]);
+
+CHECKBOXHANDLING
+UPDATECALL
+
+        return redirect()->route('TABLENAME.index')
+            ->with('success', 'MODELNAME updated successfully.');
+    }
+
+    public function destroy(MODELNAME $MODELVARIABLE)
+    {
+        $MODELVARIABLE->delete();
+
+        return redirect()->route('TABLENAME.index')
+            ->with('success', 'MODELNAME deleted successfully.');
+    }
+}
+EOT;
+
+    $template = str_replace('MODELNAMESPACE', $modelNamespace, $template);
+    $template = str_replace('MODELNAME', $modelName, $template);
+    $template = str_replace('MODELVARIABLE', $modelVariable, $template);
+    $template = str_replace('TABLENAME', $tableName, $template);
+    $template = str_replace('VALIDATIONRULES', $validationRulesString, $template);
+    $template = str_replace('CHECKBOXHANDLING', $checkboxHandling, $template);
+    $template = str_replace('CREATECALL', $createCall, $template);
+    $template = str_replace('UPDATECALL', $updateCall, $template);
+
+    return $template;
+}
+
 
     protected function addRoute($tableName, $modelName)
     {
-        $route = "
-            Route::resource('{$tableName}', App\\Http\\Controllers\\{$modelName}Controller::class); // gerado automaticamente pela biblioteca" . PHP_EOL;
+        $route = "\nRoute::resource('{$tableName}', App\\Http\\Controllers\\{$modelName}Controller::class); // gerado automaticamente pela biblioteca\n";
         File::append(base_path('routes/web.php'), $route);
         $this->line("Route for '{$tableName}' added to web.php.");
     }
@@ -308,26 +301,29 @@ class MakeScaffoldCommand extends Command
     {
         $title = Str::ucfirst($tableName);
 
-        $content = <<<EOT
+        $content = <<<'EOT'
         {{-- gerado automaticamente pela biblioteca --}}
         @extends('layouts.scaffold')
 
         @section('content')
             <div class="container mt-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1>{$title}</h1>
-                    <livewire:botao tipo="primary" label="Create New" href="{{ route('{$tableName}.create') }}" />
+                    <h1>TITLE</h1>
+                    <livewire:botao tipo="primary" label="Create New" href="{{ route('TABLENAME.create') }}" />
                 </div>
 
                 <livewire:table
-                    :collection="\$collection"
+                    :collection="$collection"
                     :busca="true"
                     :selecionavel="false"
-                    titulo="{$title}"
+                    titulo="TITLE"
                 />
             </div>
         @endsection
         EOT;
+
+        $content = str_replace('TITLE', $title, $content);
+        $content = str_replace('TABLENAME', $tableName, $content);
 
         File::put("{$path}/index.blade.php", $content);
     }
@@ -345,24 +341,28 @@ class MakeScaffoldCommand extends Command
             }
         }
 
-        $content = <<<EOT
+        $content = <<<'EOT'
         {{-- gerado automaticamente pela biblioteca --}}
         @extends('layouts.scaffold')
 
         @section('content')
             <div class="container mt-5">
-                <h1 class="mb-4">Create New {$title}</h1>
-                <form action="{{ route('{$tableName}.store') }}" method="POST">
+                <h1 class="mb-4">Create New TITLE</h1>
+                <form action="{{ route('TABLENAME.store') }}" method="POST">
                     @csrf
-                    {$formFields}
+                    FORMFIELDS
                     <div class="mt-4">
-                        <livewire:botao tipo="primary" label="Save" action="submit" />
-                        <livewire:botao tipo="secondary" label="Back" href="{{ route('{$tableName}.index') }}" />
+                        <livewire:botao tipo="primary" label="Save" tipoBotao="submit" />
+                        <livewire:botao tipo="secondary" label="Back" href="{{ route('TABLENAME.index') }}" />
                     </div>
                 </form>
             </div>
         @endsection
         EOT;
+
+        $content = str_replace('TITLE', $title, $content);
+        $content = str_replace('TABLENAME', $tableName, $content);
+        $content = str_replace('FORMFIELDS', $formFields, $content);
 
         File::put("{$path}/create.blade.php", $content);
     }
@@ -375,37 +375,98 @@ class MakeScaffoldCommand extends Command
         foreach ($columns as $name => $type) {
             $label = Str::ucfirst(str_replace('_', ' ', $name));
             if ($type === 'checkbox') {
-                $formFields .= "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', \${\$modelVariable}->{$name})\" />\n                    ";
+                $formFields .= "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', \${$modelVariable}->{$name})\" />\n                    ";
             } else {
-                $formFields .= "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}', \${\$modelVariable}->{$name}) }}\" />\n                    ";
+                $formFields .= "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}', \${$modelVariable}->{$name}) }}\" />\n                    ";
             }
         }
 
-        $content = <<<EOT
+        $content = <<<'EOT'
         {{-- gerado automaticamente pela biblioteca --}}
         @extends('layouts.scaffold')
 
         @section('content')
             <div class="container mt-5">
-                <h1 class="mb-4">Edit {$title}</h1>
-                <form action="{{ route('{$tableName}.update', \${\$modelVariable}->id) }}" method="POST">
+                <h1 class="mb-4">Edit TITLE</h1>
+                <form action="{{ route('TABLENAME.update', $MODELVARIABLE->id) }}" method="POST">
                     @csrf
                     @method('PUT')
-                    {$formFields}
+                    FORMFIELDS
                     <div class="mt-4">
-                        <livewire:botao tipo="primary" label="Update" action="submit" />
-                        <livewire:botao tipo="secondary" label="Back" href="{{ route('{$tableName}.index') }}" />
+                        <livewire:botao tipo="primary" label="Update" tipoBotao="submit" />
+                        <livewire:botao tipo="secondary" label="Back" href="{{ route('TABLENAME.index') }}" />
                     </div>
                 </form>
             </div>
         @endsection
         EOT;
 
+        $content = str_replace('TITLE', $title, $content);
+        $content = str_replace('TABLENAME', $tableName, $content);
+        $content = str_replace('MODELVARIABLE', $modelVariable, $content);
+        $content = str_replace('FORMFIELDS', $formFields, $content);
+
         File::put("{$path}/edit.blade.php", $content);
     }
 
     protected function generateShowView($path, $tableName, $columns)
     {
-        //
+        $title = Str::ucfirst(Str::singular($tableName));
+        $modelVariable = Str::singular($tableName);
+
+        $viewFields = '';
+        foreach ($columns as $column => $type) {
+            $label = Str::ucfirst(str_replace('_', ' ', $column));
+            $isBoolean = $type === 'checkbox';
+
+            if ($isBoolean) {
+                $viewFields .= "<div class=\"mb-3\"><strong>{$label}:</strong> {!! \${$modelVariable}->{$column} ? '<span class=\"badge bg-success\">Sim</span>' : '<span class=\"badge bg-danger\">Não</span>' !!}</div>\n";
+            } else {
+                $viewFields .= "<div class=\"mb-3\"><strong>{$label}:</strong> {{ \${$modelVariable}->{$column} }}</div>\n";
+            }
+        }
+
+        $content = <<<'EOT'
+        {{-- gerado automaticamente pela biblioteca --}}
+        @extends('layouts.scaffold')
+
+        @section('content')
+            <div class="container mt-5">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h1 class="card-title mb-0">Detalhes do TITLE</h1>
+                        <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>ID:</strong> {{ $MODELVARIABLE->id }}
+                        </div>
+                        VIEWFIELDS
+                        <div class="mb-3">
+                            <strong>Criado em:</strong> {{ $MODELVARIABLE->created_at }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Atualizado em:</strong> {{ $MODELVARIABLE->updated_at }}
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end gap-2">
+                        <livewire:botao tipo="button" label="Editar" href="{{ route('TABLENAME.edit', $MODELVARIABLE->id) }}" />
+                        <form action="{{ route('TABLENAME.destroy', $MODELVARIABLE->id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este item?');">
+                            @csrf
+                            @method('DELETE')
+                            <livewire:botao tipo="submit" label="Excluir" />
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endsection
+        EOT;
+
+        $content = str_replace('TITLE', $title, $content);
+        $content = str_replace('TABLENAME', $tableName, $content);
+        $content = str_replace('MODELVARIABLE', $modelVariable, $content);
+        $content = str_replace('VIEWFIELDS', $viewFields, $content);
+
+        File::put("{$path}/show.blade.php", $content);
     }
 }

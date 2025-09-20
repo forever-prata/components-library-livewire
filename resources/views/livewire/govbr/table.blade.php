@@ -80,7 +80,7 @@
                 <form action="{{ $cell['delete'] }}" method="POST" onsubmit="return confirm('Tem certeza?');">
                     @csrf
                     @method('DELETE')
-                    <livewire:botao tipo="danger" tamanho="small" label="Delete" type="submit" />
+                    <livewire:botao tipo="danger" tamanho="small" label="Delete" tipoBotao="submit" />
                 </form>
             </div>
         @else

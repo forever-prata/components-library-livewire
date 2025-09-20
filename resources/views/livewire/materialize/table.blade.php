@@ -25,7 +25,7 @@
                                           onsubmit="return confirm('Are you sure?');">
                                         @csrf
                                         @method('DELETE')
-                                        <livewire:botao tipo="danger" tamanho="small" label="Delete" type="submit" />
+                                        <livewire:botao tipo="danger" tamanho="small" label="Delete" tipoBotao="submit" />
                                     </form>
                                 </div>
                             @else
