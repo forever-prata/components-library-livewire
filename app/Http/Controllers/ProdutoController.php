@@ -31,7 +31,7 @@ class ProdutoController extends Controller
         $data = $request->all();
         $data['in_stock'] = $request->has('in_stock');
 
-Produto::create($data);
+        Produto::create($data);
 
         return redirect()->route('produtos.index')
             ->with('success', 'Produto created successfully.');
@@ -58,7 +58,7 @@ Produto::create($data);
         $data = $request->all();
         $data['in_stock'] = $request->has('in_stock');
 
-$produto->update($data);
+        $produto->update($data);
 
         return redirect()->route('produtos.index')
             ->with('success', 'Produto updated successfully.');

@@ -225,7 +225,7 @@ VALIDATIONRULES
         ]);
 
 CHECKBOXHANDLING
-CREATECALL
+        CREATECALL
 
         return redirect()->route('TABLENAME.index')
             ->with('success', 'MODELNAME created successfully.');
@@ -248,7 +248,7 @@ VALIDATIONRULES
         ]);
 
 CHECKBOXHANDLING
-UPDATECALL
+        UPDATECALL
 
         return redirect()->route('TABLENAME.index')
             ->with('success', 'MODELNAME updated successfully.');
@@ -309,7 +309,7 @@ EOT;
             <div class="container mt-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1>TITLE</h1>
-                    <livewire:botao tipo="primary" label="Create New" href="{{ route('TABLENAME.create') }}" />
+                    <livewire:botao tipo="primary" label="Novo" href="{{ route('TABLENAME.create') }}" />
                 </div>
 
                 <livewire:table
@@ -347,13 +347,13 @@ EOT;
 
         @section('content')
             <div class="container mt-5">
-                <h1 class="mb-4">Create New TITLE</h1>
+        <h1 class="mb-4">Adicionar Novo TITLE</h1>
                 <form action="{{ route('TABLENAME.store') }}" method="POST">
                     @csrf
                     FORMFIELDS
                     <div class="mt-4">
-                        <livewire:botao tipo="primary" label="Save" tipoBotao="submit" />
-                        <livewire:botao tipo="secondary" label="Back" href="{{ route('TABLENAME.index') }}" />
+                        <livewire:botao tipo="primary" label="Salvar" tipoBotao="submit" />
+                        <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
                     </div>
                 </form>
             </div>
@@ -393,8 +393,8 @@ EOT;
                     @method('PUT')
                     FORMFIELDS
                     <div class="mt-4">
-                        <livewire:botao tipo="primary" label="Update" tipoBotao="submit" />
-                        <livewire:botao tipo="secondary" label="Back" href="{{ route('TABLENAME.index') }}" />
+                        <livewire:botao tipo="primary" label="Atualizar" tipoBotao="submit" />
+                        <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
                     </div>
                 </form>
             </div>
@@ -414,48 +414,19 @@ EOT;
         $title = Str::ucfirst(Str::singular($tableName));
         $modelVariable = Str::singular($tableName);
 
-        $viewFields = '';
-        foreach ($columns as $column => $type) {
-            $label = Str::ucfirst(str_replace('_', ' ', $column));
-            $isBoolean = $type === 'checkbox';
-
-            if ($isBoolean) {
-                $viewFields .= "<div class=\"mb-3\"><strong>{$label}:</strong> {!! \${$modelVariable}->{$column} ? '<span class=\"badge bg-success\">Sim</span>' : '<span class=\"badge bg-danger\">Não</span>' !!}</div>\n";
-            } else {
-                $viewFields .= "<div class=\"mb-3\"><strong>{$label}:</strong> {{ \${$modelVariable}->{$column} }}</div>\n";
-            }
-        }
-
         $content = <<<'EOT'
         {{-- gerado automaticamente pela biblioteca --}}
         @extends('layouts.scaffold')
 
         @section('content')
             <div class="container mt-5">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h1 class="card-title mb-0">Detalhes do TITLE</h1>
-                        <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <strong>ID:</strong> {{ $MODELVARIABLE->id }}
-                        </div>
-                        VIEWFIELDS
-                        <div class="mb-3">
-                            <strong>Criado em:</strong> {{ $MODELVARIABLE->created_at }}
-                        </div>
-                        <div class="mb-3">
-                            <strong>Atualizado em:</strong> {{ $MODELVARIABLE->updated_at }}
-                        </div>
-                    </div>
-                    <div class="card-footer d-flex justify-content-end gap-2">
-                        <livewire:botao tipo="button" label="Editar" href="{{ route('TABLENAME.edit', $MODELVARIABLE->id) }}" />
-                        <form action="{{ route('TABLENAME.destroy', $MODELVARIABLE->id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este item?');">
-                            @csrf
-                            @method('DELETE')
-                            <livewire:botao tipo="submit" label="Excluir" />
-                        </form>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <livewire:card
+                            :data="$MODELVARIABLE"
+                            titulo="Detalhes do TITLE"
+                            :routeBase="'TABLENAME'"
+                        />
                     </div>
                 </div>
             </div>
