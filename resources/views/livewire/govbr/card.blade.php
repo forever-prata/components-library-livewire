@@ -49,8 +49,8 @@
         <div class="card-content text-center">
             <img src="{{ data_get($data, $campoImagem) }}"
                  alt="{{ $titulo }}"
-                 style="max-height: 300px; object-fit: cover;"
-                 class="mb-3"/>
+                 style="{{ $estiloImagem }}"
+                 class="mb-3 {{ $classeImagem }}"/>
         </div>
         @endif
 

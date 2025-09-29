@@ -15,6 +15,8 @@ class Card extends Component
     public array $campos = [];
     public bool $comImagem = false;
     public string $campoImagem = 'imagem';
+    public string $classeImagem = '';
+    public string $estiloImagem = '';
     public bool $comAvatar = false;
     public string $campoAvatar = 'avatar';
     public array $actionButtons = [];
@@ -27,6 +29,8 @@ class Card extends Component
         array $campos = [],
         bool $comImagem = false,
         string $campoImagem = 'imagem',
+        string $classeImagem = '',
+        string $estiloImagem = '',
         bool $comAvatar = false,
         string $campoAvatar = 'avatar',
         array $actionButtons = [],
@@ -38,6 +42,8 @@ class Card extends Component
         $this->campos = $campos;
         $this->comImagem = $comImagem;
         $this->campoImagem = $campoImagem;
+        $this->classeImagem = $classeImagem;
+        $this->estiloImagem = $estiloImagem;
         $this->comAvatar = $comAvatar;
         $this->campoAvatar = $campoAvatar;
         $this->actionButtons = $actionButtons;
