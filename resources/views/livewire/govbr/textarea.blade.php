@@ -1,4 +1,4 @@
-<div class="br-textarea {{ $state }} {{ $classeExtra }}">
+<div class="br-textarea {{ $state }}">
     <label for="{{ $id }}">{{ $label }}</label>
     <textarea
         id="{{ $id }}"

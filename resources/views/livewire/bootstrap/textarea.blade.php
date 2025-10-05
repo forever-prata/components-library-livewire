@@ -1,4 +1,4 @@
-<div class="form-group {{ $classeExtra }}">
+<div class="form-group">
     <label for="{{ $id }}">{{ $label }}</label>
     <textarea
         class="form-control"

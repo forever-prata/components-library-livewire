@@ -13,7 +13,6 @@ class Input extends Component
     public ?string $placeholder;
     public ?string $value;
     public ?string $wireModel;
-    public string $classeExtra;
 
     public function mount(
         string $type = 'text',
@@ -22,8 +21,7 @@ class Input extends Component
         string $id = null,
         string $placeholder = null,
         string $value = null,
-        string $wireModel = null,
-        string $classeExtra = ''
+        string $wireModel = null
     ) {
         $this->type = $type;
         $this->name = $name;
@@ -32,7 +30,6 @@ class Input extends Component
         $this->placeholder = $placeholder;
         $this->value = $value;
         $this->wireModel = $wireModel;
-        $this->classeExtra = $classeExtra;
     }
 
     public function render()

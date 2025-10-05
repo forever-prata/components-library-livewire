@@ -12,7 +12,6 @@ class Textarea extends Component
     public ?string $placeholder;
     public ?string $value;
     public ?string $wireModel;
-    public string $classeExtra;
     public int $rows;
     public string $state;
     public bool $disabled;
@@ -24,7 +23,6 @@ class Textarea extends Component
         string $placeholder = null,
         string $value = null,
         string $wireModel = null,
-        string $classeExtra = '',
         int $rows = 4,
         string $state = '',
         bool $disabled = false
@@ -35,7 +33,6 @@ class Textarea extends Component
         $this->placeholder = $placeholder;
         $this->value = $value;
         $this->wireModel = $wireModel;
-        $this->classeExtra = $classeExtra;
         $this->rows = $rows;
         $this->state = $state;
         $this->disabled = $disabled;

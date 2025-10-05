@@ -1,4 +1,4 @@
-<div class="input-field {{ $classeExtra }}">
+<div class="input-field">
     <textarea
         id="{{ $id }}"
         name="{{ $name }}"

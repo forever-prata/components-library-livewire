@@ -1,4 +1,4 @@
-<div class="br-input {{ $classeExtra }}">
+<div class="br-input">
     <label for="{{ $id }}">{{ $label }}</label>
     <input
         id="{{ $id }}"

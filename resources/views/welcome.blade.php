@@ -133,6 +133,16 @@
                             ]
                         ])
                     </div>
+
+                    <div class="my-3">
+                        <p class="font-weight-bold">Upload de Arquivo Único:</p>
+                        <livewire:upload />
+                    </div>
+
+                    <div class="my-3">
+                        <p class="font-weight-bold">Upload de Múltiplos Arquivos:</p>
+                        <livewire:upload :multiple="true" label="Anexar múltiplos arquivos" />
+                    </div>
                  </div>
             </div>
 

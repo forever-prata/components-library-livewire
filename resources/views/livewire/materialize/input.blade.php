@@ -1,4 +1,4 @@
-<div class="input-field {{ $classeExtra }}">
+<div class="input-field">
     <input
         id="{{ $id }}"
         name="{{ $name }}"
