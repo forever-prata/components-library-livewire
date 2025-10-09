@@ -15,6 +15,12 @@ class Produto extends Model
         'name',
         'description',
         'price',
-        'in_stock'
+        'in_stock',
+        'categoria_id'
     ];
+
+    public function categoria()
+    {
+        return $this->belongsTo(\App\Models\Categoria::class, 'categoria_id');
+    }
 }

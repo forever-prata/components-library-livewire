@@ -6,9 +6,9 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <livewire:card
-                    :data="$produto"
-                    titulo="Detalhes do Produto"
-                    :routeBase="'produtos'"
+                    :data="$categoria"
+                    titulo="Detalhes do Categoria"
+                    :routeBase="'categorias'"
                 />
             </div>
         </div>

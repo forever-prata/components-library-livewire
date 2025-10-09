@@ -143,6 +143,7 @@
                         <p class="font-weight-bold">Upload de Múltiplos Arquivos:</p>
                         <livewire:upload :multiple="true" label="Anexar múltiplos arquivos" />
                     </div>
+
                  </div>
             </div>
 

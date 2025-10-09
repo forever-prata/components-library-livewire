@@ -11,7 +11,7 @@
       <div class="br-item" tabindex="-1">
         <div class="br-radio">
           <input id="{{ $id . '-' . $loop->index }}" type="radio" name="{{ $name }}" value="{{ $value }}"
-            @if($wireModel) wire:model="{{ $wireModel }}" @endif />
+            @if($wireModel) wire:model="{{ $wireModel }}" @endif @if($selected == $value) checked @endif />
           <label for="{{ $id . '-' . $loop->index }}">{{ $optionLabel }}</label>
         </div>
       </div>

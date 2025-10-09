@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class MakeScaffoldCommand extends Command
 {
-    protected $signature = 'make:scaffold {migration : The name of the migration file (e.g., 2025_09_03_142650_create_produtos_table)}';
+    protected $signature = 'make:scaffold {migration : The name of the migration file (e.g., 2025_09_03_142650_create_produtos_table)} {--belongs-to=* : Related models for belongsTo relationships (e.g., --belongs-to=User --belongs-to=Category)}';
     protected $description = 'Scaffold a full CRUD resource from a migration file, using Livewire components for views.';
 
     public function handle()
@@ -38,13 +38,21 @@ class MakeScaffoldCommand extends Command
         $modelName = Str::studly(Str::singular($tableName));
         $resourceName = Str::kebab($tableName);
 
+        // Process belongsTo relationships - AGORA DETECTA AUTOMATICAMENTE
+        $belongsToModels = $this->option('belongs-to') ?? [];
+        $relationships = $this->processRelationships($belongsToModels, $columns, $content);
+
         $this->info("Scaffolding resource for table: {$tableName}");
         $this->info("Model: {$modelName}, Controller: {$modelName}Controller, Route: {$resourceName}");
 
-        $this->generateModel($modelName, $columns);
-        $this->generateController($modelName, $tableName, $columns);
+        if (!empty($relationships['belongsTo'])) {
+            $this->info("Relationships detected: " . implode(', ', array_keys($relationships['belongsTo'])));
+        }
+
+        $this->generateModel($modelName, $columns, $relationships);
+        $this->generateController($modelName, $tableName, $columns, $relationships);
         $this->addRoute($tableName, $modelName);
-        $this->generateViews($tableName, $columns);
+        $this->generateViews($tableName, $columns, $relationships);
 
         $this->info("CRUD for '{$modelName}' scaffolded successfully!");
         $this->info("Remember to run 'php artisan migrate' if you haven't already.");
@@ -78,8 +86,12 @@ class MakeScaffoldCommand extends Command
         $columns = [];
         if (preg_match_all('/\$table->(\w+)\(\'([a-zA-Z0-9_]+)\'/i', $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
-                if (!in_array($match[2], ['id', 'timestamps', 'remember_token', 'created_at', 'updated_at'])) {
-                    $columns[$match[2]] = $this->mapColumnTypeToInputType($match[1]);
+                $columnName = $match[2];
+                $columnType = $match[1];
+
+                // Skip system columns
+                if (!in_array($columnName, ['id', 'timestamps', 'remember_token', 'created_at', 'updated_at'])) {
+                    $columns[$columnName] = $this->mapColumnTypeToInputType($columnType);
                 }
             }
         }
@@ -119,163 +131,344 @@ class MakeScaffoldCommand extends Command
         }
     }
 
-    protected function generateModel($modelName, $columns)
+    protected function processRelationships($belongsToModels, &$columns, $migrationContent)
     {
-        $fillable_string = implode("',\n        '", array_keys($columns));
+        $relationships = [
+            'belongsTo' => []
+        ];
 
-        $template = <<<'EOT'
-        <?php
+        // 1. Primeiro processa relações explícitas do usuário (--belongs-to)
+        foreach ($belongsToModels as $relatedModel) {
+            $relatedModel = Str::studly($relatedModel);
+            $foreignKey = Str::snake($relatedModel) . '_id';
 
-        // gerado automaticamente pela biblioteca
+            // Remove a FK das colunas regulares
+            if (isset($columns[$foreignKey])) {
+                unset($columns[$foreignKey]);
+            }
 
-        namespace App\Models;
-
-        use Illuminate\Database\Eloquent\Factories\HasFactory;
-        use Illuminate\Database\Eloquent\Model;
-
-        class MODELNAME extends Model
-        {
-            use HasFactory;
-
-            protected $fillable = [
-                'FILLABLES'
+            $relationships['belongsTo'][$relatedModel] = [
+                'foreign_key' => $foreignKey,
+                'method_name' => Str::camel($relatedModel)
             ];
         }
-        EOT;
 
-        $template = str_replace('MODELNAME', $modelName, $template);
-        $template = str_replace('FILLABLES', $fillable_string, $template);
+        // 2. Detecta FKs automáticas da migration
+        $this->detectForeignKeysFromMigration($migrationContent, $columns, $relationships);
 
-        $modelPath = app_path("Models/{$modelName}.php");
-        File::put($modelPath, $template);
-        $this->line("Model '{$modelName}' created successfully with HasFactory and fillable property.");
+        return $relationships;
     }
 
-    protected function generateController($modelName, $tableName, $columns)
+    protected function detectForeignKeysFromMigration($content, &$columns, &$relationships)
     {
-        $controllerPath = app_path("Http/Controllers/{$modelName}Controller.php");
-        $controllerContent = $this->getControllerContent($modelName, $tableName, $columns);
-
-        File::put($controllerPath, $controllerContent);
-        $this->line("Controller '{$modelName}Controller' created with resource methods.");
-    }
-
-    protected function getControllerContent($modelName, $tableName, $columns)
-    {
-
-    $modelVariable = Str::camel($modelName);
-    $modelNamespace = "App\\Models\\{$modelName}";
-
-    $validationRules = [];
-    foreach ($columns as $column => $type) {
-        if ($type !== 'checkbox') {
-            $validationRules[] = "            '{$column}' => 'required',";
+        // Padrão 1: foreignId() - Laravel 8+
+        if (preg_match_all('/\$table->foreignId\(\'([a-zA-Z0-9_]+)\'\)/', $content, $matches)) {
+            foreach ($matches[1] as $foreignKey) {
+                $this->addDetectedRelationship($foreignKey, $columns, $relationships);
+            }
         }
-    }
-    $validationRulesString = implode("\n", $validationRules);
 
-    $checkboxHandling = '';
-    $hasCheckboxes = false;
-    foreach ($columns as $column => $type) {
-        if ($type === 'checkbox') {
-            $hasCheckboxes = true;
-            break;
+        // Padrão 2: unsignedBigInteger + foreign
+        if (preg_match_all('/\$table->(unsignedBigInteger|unsignedInteger)\(\'([a-zA-Z0-9_]+)\'\)/', $content, $matches)) {
+            foreach ($matches[2] as $foreignKey) {
+                // Verifica se há uma constraint foreign associada
+                if (strpos($content, "\$table->foreign('{$foreignKey}')") !== false) {
+                    $this->addDetectedRelationship($foreignKey, $columns, $relationships);
+                }
+            }
         }
-    }
 
-    if ($hasCheckboxes) {
-        $checkboxHandling = "        \$data = \$request->all();\n";
-        foreach ($columns as $column => $type) {
-            if ($type === 'checkbox') {
-                $checkboxHandling .= "        \$data['{$column}'] = \$request->has('{$column}');\n";
+        // Padrão 3: Colunas que terminam com _id e são do tipo inteiro
+        foreach ($columns as $columnName => $columnType) {
+            if (str_ends_with($columnName, '_id') && in_array($columnType, ['number'])) {
+                $this->addDetectedRelationship($columnName, $columns, $relationships);
             }
         }
     }
 
-    $createCall = $hasCheckboxes ? "{$modelName}::create(\$data);" : "{$modelName}::create(\$request->all());";
-    $updateCall = $hasCheckboxes ? "\${$modelVariable}->update(\$data);" : "\${$modelVariable}->update(\$request->all());";
+    protected function addDetectedRelationship($foreignKey, &$columns, &$relationships)
+    {
+        // Extrai o nome do modelo do foreign key (categoria_id -> Categoria)
+        $relatedModel = Str::studly(str_replace('_id', '', $foreignKey));
 
-    $template = <<<'EOT'
+        // Verifica se já não existe essa relação (para evitar duplicatas)
+        if (!isset($relationships['belongsTo'][$relatedModel])) {
+            // Remove a FK das colunas regulares
+            if (isset($columns[$foreignKey])) {
+                unset($columns[$foreignKey]);
+            }
+
+            $relationships['belongsTo'][$relatedModel] = [
+                'foreign_key' => $foreignKey,
+                'method_name' => Str::camel($relatedModel)
+            ];
+
+            $this->info("Detected relationship: {$relatedModel} via {$foreignKey}");
+        }
+    }
+
+    protected function generateModel($modelName, $columns, $relationships)
+    {
+        $fillable = array_keys($columns);
+
+        // Add foreign keys to fillable
+        foreach ($relationships['belongsTo'] as $config) {
+            $fillable[] = $config['foreign_key'];
+        }
+
+        $fillable_string = implode("',\n        '", $fillable);
+
+        // Add relationship methods
+        $relationshipMethods = '';
+        if (!empty($relationships['belongsTo'])) {
+            foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+                $methodName = $config['method_name'];
+                $relationshipMethods .= <<<EOT
+
+    public function {$methodName}()
+    {
+        return \$this->belongsTo(\\App\\Models\\{$relatedModel}::class, '{$config['foreign_key']}');
+    }
+EOT;
+            }
+        }
+
+        $template = <<<EOT
+<?php
+
+// gerado automaticamente pela biblioteca
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class {$modelName} extends Model
+{
+    use HasFactory;
+
+    protected \$fillable = [
+        '{$fillable_string}'
+    ];
+{$relationshipMethods}
+}
+EOT;
+
+        $modelPath = app_path("Models/{$modelName}.php");
+        File::put($modelPath, $template);
+        $this->line("Model '{$modelName}' created successfully with HasFactory, fillable property, and relationships.");
+    }
+
+    protected function generateController($modelName, $tableName, $columns, $relationships)
+    {
+        $controllerPath = app_path("Http/Controllers/{$modelName}Controller.php");
+        $controllerContent = $this->getControllerContent($modelName, $tableName, $columns, $relationships);
+
+        File::put($controllerPath, $controllerContent);
+        $this->line("Controller '{$modelName}Controller' created with resource methods and relationships.");
+    }
+
+    protected function getControllerContent($modelName, $tableName, $columns, $relationships)
+    {
+        $modelVariable = Str::camel($modelName);
+        $modelNamespace = "App\\Models\\{$modelName}";
+
+        // Add relationship data for views
+        $relationshipData = '';
+        $createWithData = '';
+        $editWithData = '';
+
+        if (!empty($relationships['belongsTo'])) {
+            $relationshipImports = [];
+            $relationshipVars = [];
+
+            foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+                $relationshipImports[] = "use App\\Models\\{$relatedModel};";
+                $varName = Str::plural($config['method_name']);
+                $relationshipVars[] = "'{$varName}' => {$relatedModel}::all()";
+            }
+
+            $relationshipData = implode("\n", $relationshipImports) . "\n";
+
+            // Corrigido: usar compact() corretamente
+            if (!empty($relationshipVars)) {
+                $relationshipVarsString = implode(', ', $relationshipVars);
+                $createWithData = ", {$relationshipVarsString}";
+                $editWithData = ", {$relationshipVarsString}";
+            }
+        }
+
+        $validationRules = [];
+        foreach ($columns as $column => $type) {
+            if ($type !== 'checkbox') {
+                $validationRules[] = "            '{$column}' => 'required',";
+            }
+        }
+
+        // Add validation for foreign keys
+        foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+            $validationRules[] = "            '{$config['foreign_key']}' => 'required|exists:" . Str::plural(Str::snake($relatedModel)) . ",id',";
+        }
+
+        $validationRulesString = implode("\n", $validationRules);
+
+        $checkboxHandling = '';
+        $hasCheckboxes = false;
+        foreach ($columns as $column => $type) {
+            if ($type === 'checkbox') {
+                $hasCheckboxes = true;
+                break;
+            }
+        }
+
+        if ($hasCheckboxes) {
+            $checkboxHandling = "        \$data = \$request->all();\n";
+            foreach ($columns as $column => $type) {
+                if ($type === 'checkbox') {
+                    $checkboxHandling .= "        \$data['{$column}'] = \$request->has('{$column}');\n";
+                }
+            }
+        }
+
+        $createCall = $hasCheckboxes ? "{$modelName}::create(\$data);" : "{$modelName}::create(\$request->all());";
+        $updateCall = $hasCheckboxes ? "\${$modelVariable}->update(\$data);" : "\${$modelVariable}->update(\$request->all());";
+
+        // Handle relationship loading - CORRIGIDO
+        $relationshipLoad = '';
+        $relationshipLoadEdit = '';
+
+        if (!empty($relationships['belongsTo'])) {
+            $relationshipLoadArray = [];
+            foreach ($relationships['belongsTo'] as $config) {
+                $relationshipLoadArray[] = "'{$config['method_name']}'";
+            }
+            $relationshipLoadString = implode(', ', $relationshipLoadArray);
+            $relationshipLoad = "->with([{$relationshipLoadString}])";
+            $relationshipLoadEdit = "        \${$modelVariable}->load([{$relationshipLoadString}]);";
+        }
+
+        // CORREÇÃO PRINCIPAL: Gerar o controller corretamente
+        $template = <<<EOT
 <?php
 
 // gerado automaticamente pela biblioteca
 
 namespace App\Http\Controllers;
 
-use MODELNAMESPACE;
+use {$modelNamespace};{$relationshipData}
 use Illuminate\Http\Request;
 
-class MODELNAMEController extends Controller
+class {$modelName}Controller extends Controller
 {
     public function index()
     {
-        $collection = MODELNAME::all();
-        return view('TABLENAME.index', compact('collection'));
+        \$collection = {$modelName}::with([{$this->getRelationshipArray($relationships)}])->get();
+        return view('{$tableName}.index', compact('collection'));
     }
 
     public function create()
     {
-        return view('TABLENAME.create');
+        {$this->getRelationshipVariables($relationships)}
+        return view('{$tableName}.create', compact({$this->getCompactVariables($relationships)}));
     }
 
-    public function store(Request $request)
+    public function store(Request \$request)
     {
-        $request->validate([
-VALIDATIONRULES
+        \$request->validate([
+{$validationRulesString}
         ]);
 
-CHECKBOXHANDLING
-        CREATECALL
+{$checkboxHandling}
+        {$createCall}
 
-        return redirect()->route('TABLENAME.index')
-            ->with('success', 'MODELNAME created successfully.');
+        return redirect()->route('{$tableName}.index')
+            ->with('success', '{$modelName} created successfully.');
     }
 
-    public function show(MODELNAME $MODELVARIABLE)
+    public function show({$modelName} \${$modelVariable})
     {
-        return view('TABLENAME.show', compact('MODELVARIABLE'));
+{$relationshipLoadEdit}
+        return view('{$tableName}.show', compact('{$modelVariable}'));
     }
 
-    public function edit(MODELNAME $MODELVARIABLE)
+    public function edit({$modelName} \${$modelVariable})
     {
-        return view('TABLENAME.edit', compact('MODELVARIABLE'));
+{$relationshipLoadEdit}
+        {$this->getRelationshipVariables($relationships)}
+        return view('{$tableName}.edit', compact('{$modelVariable}', {$this->getCompactVariables($relationships, false)}));
     }
 
-    public function update(Request $request, MODELNAME $MODELVARIABLE)
+    public function update(Request \$request, {$modelName} \${$modelVariable})
     {
-        $request->validate([
-VALIDATIONRULES
+        \$request->validate([
+{$validationRulesString}
         ]);
 
-CHECKBOXHANDLING
-        UPDATECALL
+{$checkboxHandling}
+        {$updateCall}
 
-        return redirect()->route('TABLENAME.index')
-            ->with('success', 'MODELNAME updated successfully.');
+        return redirect()->route('{$tableName}.index')
+            ->with('success', '{$modelName} updated successfully.');
     }
 
-    public function destroy(MODELNAME $MODELVARIABLE)
+    public function destroy({$modelName} \${$modelVariable})
     {
-        $MODELVARIABLE->delete();
+        \${$modelVariable}->delete();
 
-        return redirect()->route('TABLENAME.index')
-            ->with('success', 'MODELNAME deleted successfully.');
+        return redirect()->route('{$tableName}.index')
+            ->with('success', '{$modelName} deleted successfully.');
     }
 }
 EOT;
 
-    $template = str_replace('MODELNAMESPACE', $modelNamespace, $template);
-    $template = str_replace('MODELNAME', $modelName, $template);
-    $template = str_replace('MODELVARIABLE', $modelVariable, $template);
-    $template = str_replace('TABLENAME', $tableName, $template);
-    $template = str_replace('VALIDATIONRULES', $validationRulesString, $template);
-    $template = str_replace('CHECKBOXHANDLING', $checkboxHandling, $template);
-    $template = str_replace('CREATECALL', $createCall, $template);
-    $template = str_replace('UPDATECALL', $updateCall, $template);
+        return $template;
+    }
 
-    return $template;
-}
+    // Métodos auxiliares para gerar o código corretamente
+    protected function getRelationshipArray($relationships)
+    {
+        if (empty($relationships['belongsTo'])) {
+            return '';
+        }
 
+        $relations = [];
+        foreach ($relationships['belongsTo'] as $config) {
+            $relations[] = "'{$config['method_name']}'";
+        }
+        return implode(', ', $relations);
+    }
+
+    protected function getRelationshipVariables($relationships)
+    {
+        if (empty($relationships['belongsTo'])) {
+            return '';
+        }
+
+        $vars = [];
+        foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+            $varName = Str::plural($config['method_name']);
+            $vars[] = "\${$varName} = {$relatedModel}::all();";
+        }
+        return implode("\n        ", $vars);
+    }
+
+    protected function getCompactVariables($relationships, $includeQuotes = true)
+    {
+        if (empty($relationships['belongsTo'])) {
+            return '';
+        }
+
+        $vars = [];
+        foreach ($relationships['belongsTo'] as $config) {
+            $varName = Str::plural($config['method_name']);
+            if ($includeQuotes) {
+                $vars[] = "'{$varName}'";
+            } else {
+                $vars[] = "'{$varName}'";
+            }
+        }
+        return implode(', ', $vars);
+    }
 
     protected function addRoute($tableName, $modelName)
     {
@@ -284,20 +477,20 @@ EOT;
         $this->line("Route for '{$tableName}' added to web.php.");
     }
 
-    protected function generateViews($tableName, $columns)
+    protected function generateViews($tableName, $columns, $relationships)
     {
         $viewPath = resource_path("views/{$tableName}");
         File::makeDirectory($viewPath, 0755, true, true);
 
-        $this->generateIndexView($viewPath, $tableName, $columns);
-        $this->generateCreateView($viewPath, $tableName, $columns);
-        $this->generateEditView($viewPath, $tableName, $columns);
-        $this->generateShowView($viewPath, $tableName, $columns);
+        $this->generateIndexView($viewPath, $tableName, $columns, $relationships);
+        $this->generateCreateView($viewPath, $tableName, $columns, $relationships);
+        $this->generateEditView($viewPath, $tableName, $columns, $relationships);
+        $this->generateShowView($viewPath, $tableName, $columns, $relationships);
 
         $this->line("Views created in resources/views/{$tableName}/");
     }
 
-    protected function generateIndexView($path, $tableName, $columns)
+    protected function generateIndexView($path, $tableName, $columns, $relationships)
     {
         $title = Str::ucfirst($tableName);
 
@@ -328,10 +521,28 @@ EOT;
         File::put("{$path}/index.blade.php", $content);
     }
 
-    protected function generateCreateView($path, $tableName, $columns)
+    protected function generateCreateView($path, $tableName, $columns, $relationships)
     {
         $title = Str::ucfirst(Str::singular($tableName));
         $formFields = '';
+
+        // Add relationship selects FIRST
+        foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+            $label = Str::ucfirst(str_replace('_', ' ', $config['method_name']));
+            $varName = Str::plural($config['method_name']);
+            $formFields .= <<<EOT
+            @livewire('select', [
+                'name' => '{$config['foreign_key']}',
+                'label' => '{$label}',
+                'id' => '{$config['foreign_key']}',
+                'options' => \${$varName}->pluck('name', 'id')->toArray(),
+                'placeholder' => 'Selecione uma {$label}'
+            ])
+
+EOT;
+        }
+
+        // Then add regular columns
         foreach ($columns as $name => $type) {
             $label = Str::ucfirst(str_replace('_', ' ', $name));
             if ($type === 'checkbox') {
@@ -367,11 +578,30 @@ EOT;
         File::put("{$path}/create.blade.php", $content);
     }
 
-    protected function generateEditView($path, $tableName, $columns)
+    protected function generateEditView($path, $tableName, $columns, $relationships)
     {
         $title = Str::ucfirst(Str::singular($tableName));
         $modelVariable = Str::singular($tableName);
         $formFields = '';
+
+        // Add relationship selects FIRST
+        foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+            $label = Str::ucfirst(str_replace('_', ' ', $config['method_name']));
+            $varName = Str::plural($config['method_name']);
+            $formFields .= <<<EOT
+            @livewire('select', [
+                'name' => '{$config['foreign_key']}',
+                'label' => '{$label}',
+                'id' => '{$config['foreign_key']}',
+                'options' => \${$varName}->pluck('name', 'id')->toArray(),
+                'placeholder' => 'Selecione uma {$label}',
+                'selected' => old('{$config['foreign_key']}', \${$modelVariable}->{$config['foreign_key']})
+            ])
+
+EOT;
+        }
+
+        // Then add regular columns
         foreach ($columns as $name => $type) {
             $label = Str::ucfirst(str_replace('_', ' ', $name));
             if ($type === 'checkbox') {
@@ -409,7 +639,7 @@ EOT;
         File::put("{$path}/edit.blade.php", $content);
     }
 
-    protected function generateShowView($path, $tableName, $columns)
+    protected function generateShowView($path, $tableName, $columns, $relationships)
     {
         $title = Str::ucfirst(Str::singular($tableName));
         $modelVariable = Str::singular($tableName);
@@ -436,7 +666,6 @@ EOT;
         $content = str_replace('TITLE', $title, $content);
         $content = str_replace('TABLENAME', $tableName, $content);
         $content = str_replace('MODELVARIABLE', $modelVariable, $content);
-        $content = str_replace('VIEWFIELDS', $viewFields, $content);
 
         File::put("{$path}/show.blade.php", $content);
     }

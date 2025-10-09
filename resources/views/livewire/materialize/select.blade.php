@@ -4,9 +4,9 @@
         name="{{ $name }}"
         @if($wireModel) wire:model.live="{{ $wireModel }}" @endif
     >
-        <option value="" disabled selected>{{ $placeholder }}</option>
+        <option value="" disabled>{{ $placeholder }}</option>
         @foreach ($options as $value => $optionLabel)
-            <option value="{{ $value }}">{{ $optionLabel }}</option>
+            <option value="{{ $value }}" @if($selected == $value) selected @endif>{{ $optionLabel }}</option>
         @endforeach
     </select>
     <label for="{{ $id }}">{{ $label }}</label>

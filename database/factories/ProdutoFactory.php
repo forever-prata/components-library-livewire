@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Categoria;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,7 +17,10 @@ class ProdutoFactory extends Factory
      */
     public function definition(): array
     {
+        $categoriaIds = Categoria::pluck('id')->toArray();
+
         return [
+            'categoria_id' => $this->faker->randomElement($categoriaIds),
             'name' => $this->faker->words(3, true),
             'description' => $this->faker->sentence(),
             'price' => $this->faker->randomFloat(2, 10, 500),
