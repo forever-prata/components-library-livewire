@@ -495,25 +495,25 @@ EOT;
         $title = Str::ucfirst($tableName);
 
         $content = <<<'EOT'
-        {{-- gerado automaticamente pela biblioteca --}}
-        @extends('layouts.scaffold')
+    {{-- gerado automaticamente pela biblioteca --}}
+    @extends('layouts.scaffold')
 
-        @section('content')
-            <div class="container mt-5">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1>TITLE</h1>
-                    <livewire:botao tipo="primary" label="Novo" href="{{ route('TABLENAME.create') }}" />
-                </div>
-
-                <livewire:table
-                    :collection="$collection"
-                    :busca="true"
-                    :selecionavel="false"
-                    titulo="TITLE"
-                />
+    @section('content')
+        <div class="container mt-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>TITLE</h1>
+                <livewire:botao tipo="primary" label="Novo" href="{{ route('TABLENAME.create') }}" />
             </div>
-        @endsection
-        EOT;
+
+            <livewire:table
+                :collection="$collection"
+                :busca="true"
+                :selecionavel="false"
+                titulo="TITLE"
+            />
+        </div>
+    @endsection
+    EOT;
 
         $content = str_replace('TITLE', $title, $content);
         $content = str_replace('TABLENAME', $tableName, $content);
@@ -525,55 +525,51 @@ EOT;
     {
         $title = Str::ucfirst(Str::singular($tableName));
         $formFields = '';
+        $indentation = '            ';
 
-        // Add relationship selects FIRST
         foreach ($relationships['belongsTo'] as $relatedModel => $config) {
             $label = Str::ucfirst(str_replace('_', ' ', $config['method_name']));
             $varName = Str::plural($config['method_name']);
-            $formFields .= <<<EOT
-            @livewire('select', [
-                'name' => '{$config['foreign_key']}',
-                'label' => '{$label}',
-                'id' => '{$config['foreign_key']}',
-                'options' => \${$varName}->pluck('name', 'id')->toArray(),
-                'placeholder' => 'Selecione uma {$label}'
-            ])
-
-EOT;
+            $formFields .= $indentation . "@livewire('select', [\n";
+            $formFields .= $indentation . "    'name' => '{$config['foreign_key']}',\n";
+            $formFields .= $indentation . "    'label' => '{$label}',\n";
+            $formFields .= $indentation . "    'id' => '{$config['foreign_key']}',\n";
+            $formFields .= $indentation . "    'options' => \${$varName}->pluck('name', 'id')->toArray(),\n";
+            $formFields .= $indentation . "    'placeholder' => 'Selecione uma {$label}'\n";
+            $formFields .= $indentation . "])\n\n";
         }
 
-        // Then add regular columns
         foreach ($columns as $name => $type) {
             $label = Str::ucfirst(str_replace('_', ' ', $name));
             if ($type === 'checkbox') {
-                 $formFields .= "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', true)\" />\n                ";
+                $formFields .= $indentation . "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', true)\" />\n";
             } else {
-                 $formFields .= "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}') }}\" />\n                ";
+                $formFields .= $indentation . "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}') }}\" />\n";
             }
         }
 
         $content = <<<'EOT'
-        {{-- gerado automaticamente pela biblioteca --}}
-        @extends('layouts.scaffold')
+    {{-- gerado automaticamente pela biblioteca --}}
+    @extends('layouts.scaffold')
 
-        @section('content')
-            <div class="container mt-5">
-        <h1 class="mb-4">Adicionar Novo TITLE</h1>
-                <form action="{{ route('TABLENAME.store') }}" method="POST">
-                    @csrf
-                    FORMFIELDS
-                    <div class="mt-4">
-                        <livewire:botao tipo="primary" label="Salvar" tipoBotao="submit" />
-                        <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
-                    </div>
-                </form>
-            </div>
-        @endsection
-        EOT;
+    @section('content')
+        <div class="container mt-5">
+            <h1 class="mb-4">Adicionar Novo TITLE</h1>
+            <form action="{{ route('TABLENAME.store') }}" method="POST">
+                @csrf
+    FORMFIELDS
+                <div class="mt-4">
+                    <livewire:botao tipo="primary" label="Salvar" tipoBotao="submit" />
+                    <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
+                </div>
+            </form>
+        </div>
+    @endsection
+    EOT;
 
         $content = str_replace('TITLE', $title, $content);
         $content = str_replace('TABLENAME', $tableName, $content);
-        $content = str_replace('FORMFIELDS', $formFields, $content);
+        $content = str_replace('FORMFIELDS', rtrim($formFields), $content);
 
         File::put("{$path}/create.blade.php", $content);
     }
@@ -583,58 +579,54 @@ EOT;
         $title = Str::ucfirst(Str::singular($tableName));
         $modelVariable = Str::singular($tableName);
         $formFields = '';
+        $indentation = '            ';
 
-        // Add relationship selects FIRST
         foreach ($relationships['belongsTo'] as $relatedModel => $config) {
             $label = Str::ucfirst(str_replace('_', ' ', $config['method_name']));
             $varName = Str::plural($config['method_name']);
-            $formFields .= <<<EOT
-            @livewire('select', [
-                'name' => '{$config['foreign_key']}',
-                'label' => '{$label}',
-                'id' => '{$config['foreign_key']}',
-                'options' => \${$varName}->pluck('name', 'id')->toArray(),
-                'placeholder' => 'Selecione uma {$label}',
-                'selected' => old('{$config['foreign_key']}', \${$modelVariable}->{$config['foreign_key']})
-            ])
-
-EOT;
+            $formFields .= $indentation . "@livewire('select', [\n";
+            $formFields .= $indentation . "    'name' => '{$config['foreign_key']}',\n";
+            $formFields .= $indentation . "    'label' => '{$label}',\n";
+            $formFields .= $indentation . "    'id' => '{$config['foreign_key']}',\n";
+            $formFields .= $indentation . "    'options' => \${$varName}->pluck('name', 'id')->toArray(),\n";
+            $formFields .= $indentation . "    'placeholder' => 'Selecione uma {$label}',\n";
+            $formFields .= $indentation . "    'selected' => old('{$config['foreign_key']}', \${$modelVariable}->{$config['foreign_key']})\n";
+            $formFields .= $indentation . "])\n\n";
         }
 
-        // Then add regular columns
         foreach ($columns as $name => $type) {
             $label = Str::ucfirst(str_replace('_', ' ', $name));
             if ($type === 'checkbox') {
-                $formFields .= "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', \${$modelVariable}->{$name})\" />\n                    ";
+                $formFields .= $indentation . "<livewire:checkbox name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" :checked=\"old('{$name}', \${$modelVariable}->{$name})\" />\n";
             } else {
-                $formFields .= "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}', \${$modelVariable}->{$name}) }}\" />\n                    ";
+                $formFields .= $indentation . "<livewire:input type=\"{$type}\" name=\"{$name}\" label=\"{$label}\" id=\"{$name}\" value=\"{{ old('{$name}', \${$modelVariable}->{$name}) }}\" />\n";
             }
         }
 
         $content = <<<'EOT'
-        {{-- gerado automaticamente pela biblioteca --}}
-        @extends('layouts.scaffold')
+    {{-- gerado automaticamente pela biblioteca --}}
+    @extends('layouts.scaffold')
 
-        @section('content')
-            <div class="container mt-5">
-                <h1 class="mb-4">Edit TITLE</h1>
-                <form action="{{ route('TABLENAME.update', $MODELVARIABLE->id) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-                    FORMFIELDS
-                    <div class="mt-4">
-                        <livewire:botao tipo="primary" label="Atualizar" tipoBotao="submit" />
-                        <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
-                    </div>
-                </form>
-            </div>
-        @endsection
-        EOT;
+    @section('content')
+        <div class="container mt-5">
+            <h1 class="mb-4">Edit TITLE</h1>
+            <form action="{{ route('TABLENAME.update', $MODELVARIABLE->id) }}" method="POST">
+                @csrf
+                @method('PUT')
+    FORMFIELDS
+                <div class="mt-4">
+                    <livewire:botao tipo="primary" label="Atualizar" tipoBotao="submit" />
+                    <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
+                </div>
+            </form>
+        </div>
+    @endsection
+    EOT;
 
         $content = str_replace('TITLE', $title, $content);
         $content = str_replace('TABLENAME', $tableName, $content);
         $content = str_replace('MODELVARIABLE', $modelVariable, $content);
-        $content = str_replace('FORMFIELDS', $formFields, $content);
+        $content = str_replace('FORMFIELDS', rtrim($formFields), $content);
 
         File::put("{$path}/edit.blade.php", $content);
     }
@@ -645,23 +637,23 @@ EOT;
         $modelVariable = Str::singular($tableName);
 
         $content = <<<'EOT'
-        {{-- gerado automaticamente pela biblioteca --}}
-        @extends('layouts.scaffold')
+    {{-- gerado automaticamente pela biblioteca --}}
+    @extends('layouts.scaffold')
 
-        @section('content')
-            <div class="container mt-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <livewire:card
-                            :data="$MODELVARIABLE"
-                            titulo="Detalhes do TITLE"
-                            :routeBase="'TABLENAME'"
-                        />
-                    </div>
+    @section('content')
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <livewire:card
+                        :data="$MODELVARIABLE"
+                        titulo="Detalhes do TITLE"
+                        :routeBase="'TABLENAME'"
+                    />
                 </div>
             </div>
-        @endsection
-        EOT;
+        </div>
+    @endsection
+    EOT;
 
         $content = str_replace('TITLE', $title, $content);
         $content = str_replace('TABLENAME', $tableName, $content);
