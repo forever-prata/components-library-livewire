@@ -156,6 +156,26 @@
                     classeExtra="striped"
                 />
             </div>
+
+            @php
+                $dados = [
+                    ['nome' => 'Produto A', 'preco' => 10],
+                    ['nome' => 'Produto B', 'preco' => 20],
+                ];
+
+                $collection = collect($dados);
+            @endphp
+
+            <livewire:table
+                :collection="$collection"
+                titulo="Produtos"
+                :columns="[
+                    'nome' => 'Nome do Produto',
+                    'preco' => 'Preço (R$)',
+                ]"
+                actionsTitle="Ações"
+            />
+
         </div>
     </div>
   </body>

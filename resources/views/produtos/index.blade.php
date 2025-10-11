@@ -11,8 +11,15 @@
         <livewire:table
             :collection="$collection"
             :busca="true"
-            :selecionavel="false"
             titulo="Produtos"
+            :columns="[
+                'name' => 'Nome do Produto',
+                'price' => 'Preço (R$)',
+            ]"
+            actionsTitle="Opções"
+            :gerar-acoes="true"
         />
+
+
     </div>
 @endsection
