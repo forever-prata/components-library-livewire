@@ -44,6 +44,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <script>
+        window.designSystem = '{{ config('design.system') }}';
+    </script>
                 @php
             $viteAssets = ['resources/css/themes/' . config('design.system') . '.css', 'resources/js/app.js'];
             if (config('design.system') !== 'materialize') {
@@ -98,6 +101,7 @@
             <div class="col-12">
                  <h2>Outros Componentes</h2>
                  <div style="max-width: 500px;">
+                    <livewire:botao tipo="primary" tamanho="large" label="Enviar" />
                     <livewire:botao tipo="primary" tamanho="large" label="Enviar" />
                     <livewire:botao href="https://gov.br" tipo="secondary" tamanho="large" label="Ir para o Gov.BR" />
                     <livewire:botao action="salvarUsuario" tipo="danger" label="Salvar" />

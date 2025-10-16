@@ -1,8 +1,8 @@
 <div>
     <label for="{{ $id }}" class="form-label">{{ $label }}</label>
-    <select 
-        class="form-select" 
-        id="{{ $id }}" 
+    <select
+        class="form-select"
+        id="{{ $id }}"
         name="{{ $name }}"
         @if($wireModel) wire:model.live="{{ $wireModel }}" @endif
     >
