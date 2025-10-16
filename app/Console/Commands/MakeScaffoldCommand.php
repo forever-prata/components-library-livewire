@@ -382,7 +382,7 @@ class {$modelName}Controller extends Controller
         {$createCall}
 
         return redirect()->route('{$tableName}.index')
-            ->with('success', '{$modelName} created successfully.');
+            ->with('success', '{$modelName} criado com sucesso.');
     }
 
     public function show({$modelName} \${$modelVariable})
@@ -408,7 +408,7 @@ class {$modelName}Controller extends Controller
         {$updateCall}
 
         return redirect()->route('{$tableName}.index')
-            ->with('success', '{$modelName} updated successfully.');
+            ->with('success', '{$modelName} atualizado com sucesso.');
     }
 
     public function destroy({$modelName} \${$modelVariable})
@@ -416,7 +416,7 @@ class {$modelName}Controller extends Controller
         \${$modelVariable}->delete();
 
         return redirect()->route('{$tableName}.index')
-            ->with('success', '{$modelName} deleted successfully.');
+            ->with('success', '{$modelName} excluido com sucesso.');
     }
 }
 EOT;
