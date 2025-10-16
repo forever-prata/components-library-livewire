@@ -12,7 +12,7 @@
             :collection="$collection"
             :busca="true"
             titulo="Produtos"
-            :columns="[
+            :colunas="[
                 'name' => 'Nome do Produto',
                 'price' => 'Preço (R$)',
             ]"

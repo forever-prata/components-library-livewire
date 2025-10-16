@@ -173,7 +173,7 @@
             <livewire:table
                 :collection="$collection"
                 titulo="Produtos"
-                :columns="[
+                :colunas="[
                     'nome' => 'Nome do Produto',
                     'preco' => 'Preço (R$)',
                 ]"

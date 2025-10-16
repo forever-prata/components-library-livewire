@@ -13,14 +13,14 @@ class Table extends Component
     public bool $busca = false;
     public bool $selecionavel = false;
     public bool $colapsavel = false;
-    public array $actionButtons = [];
+    public array $botoesAcao = [];
     public string $classeExtra = '';
-    public string $actionsTitle = 'Ações';
+    public string $tituloAcoes = 'Ações';
     public bool $gerarAcoes = true;
 
     public array $headers = [];
     public array $rows = [];
-    public array $columns = [];
+    public array $colunas = [];
 
     public function mount(
         Collection $collection,
@@ -28,10 +28,10 @@ class Table extends Component
         bool $busca = false,
         bool $selecionavel = false,
         bool $colapsavel = false,
-        array $actionButtons = [],
+        array $botoesAcao = [],
         string $classeExtra = '',
-        array $columns = [],
-        string $actionsTitle = 'Ações',
+        array $colunas = [],
+        string $tituloAcoes = 'Ações',
         bool $gerarAcoes = true
     )
     {
@@ -40,10 +40,10 @@ class Table extends Component
         $this->busca = $busca;
         $this->selecionavel = $selecionavel;
         $this->colapsavel = $colapsavel;
-        $this->actionButtons = $actionButtons;
+        $this->botoesAcao = $botoesAcao;
         $this->classeExtra = $classeExtra;
-        $this->columns = $columns;
-        $this->actionsTitle = $actionsTitle;
+        $this->colunas = $colunas;
+        $this->tituloAcoes = $tituloAcoes;
         $this->gerarAcoes = $gerarAcoes;
     }
 
@@ -52,8 +52,8 @@ class Table extends Component
         if ($this->collection->isNotEmpty()) {
             $firstItem = $this->collection->first();
 
-            $this->headers = !empty($this->columns)
-                ? array_values($this->columns)
+            $this->headers = !empty($this->colunas)
+                ? array_values($this->colunas)
                 : (is_object($firstItem) && method_exists($firstItem, 'getAttributes')
                     ? array_keys($firstItem->getAttributes())
                     : array_keys((array) $firstItem)
@@ -71,7 +71,7 @@ class Table extends Component
 
                 if ($item instanceof \Illuminate\Database\Eloquent\Model && isset($item->id) && $this->gerarAcoes) {
                     $tableName = $item->getTable();
-                    $rowData[$this->actionsTitle] = [
+                    $rowData[$this->tituloAcoes] = [
                         'show' => route("{$tableName}.show", $item->id),
                         'edit' => route("{$tableName}.edit", $item->id),
                         'delete' => route("{$tableName}.destroy", $item->id),
@@ -82,9 +82,9 @@ class Table extends Component
             })->toArray();
 
             if (!empty($this->rows)) {
-                $hasActions = $this->gerarAcoes && (!empty($this->actionButtons) || collect($this->rows)->contains(fn($row) => isset($row[$this->actionsTitle])));
-                if ($hasActions && !in_array($this->actionsTitle, $this->headers)) {
-                    $this->headers[] = $this->actionsTitle;
+                $hasActions = $this->gerarAcoes && (!empty($this->botoesAcao) || collect($this->rows)->contains(fn($row) => isset($row[$this->tituloAcoes])));
+                if ($hasActions && !in_array($this->tituloAcoes, $this->headers)) {
+                    $this->headers[] = $this->tituloAcoes;
                 }
             }
 
