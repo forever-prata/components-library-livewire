@@ -14,12 +14,12 @@
                         <td>
                             @if(is_array($cell) && isset($cell['show']))
                                 <div style="display: flex; align-items: center; gap: 5px;">
-                                    <livewire:botao tipo="secondary" tamanho="small" :href="$cell['show']" label="Show" />
-                                    <livewire:botao tipo="secondary" tamanho="small" :href="$cell['edit']" label="Edit" />
+                                    <livewire:botao tipo="secondary" tamanho="small" :href="$cell['show']" label="Detalhes" />
+                                    <livewire:botao tipo="secondary" tamanho="small" :href="$cell['edit']" label="Editar" />
                                     <form action="{{ $cell['delete'] }}" method="POST" onsubmit="return confirm('Tem certeza?');">
                                         @csrf
                                         @method('DELETE')
-                                        <livewire:botao tipo="danger" tamanho="small" label="Delete" tipoBotao="submit" />
+                                        <livewire:botao tipo="danger" tamanho="small" label="Excluir" tipoBotao="submit" />
                                     </form>
                                 </div>
                             @else
