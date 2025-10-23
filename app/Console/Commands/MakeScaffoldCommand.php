@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class MakeScaffoldCommand extends Command
 {
-    protected $signature = 'make:scaffold {migration : The name of the migration file (e.g., 2025_09_03_142650_create_produtos_table)} {--belongs-to=* : Related models for belongsTo relationships (e.g., --belongs-to=User --belongs-to=Category)} {--many-to-many=* : Related models for many-to-many relationships (e.g., --many-to-many=Tag --many-to-many=Category)}';
+    protected $signature = 'make:scaffold {migration : The name of the migration file (e.g., 2025_09_03_142650_create_produtos_table)} {--belongs-to=* : Related models for belongsTo relationships (e.g., --belongs-to=User --belongs-to=Category)} {--belongs-to-many=* : Related models for BelongsToMany relationships (e.g., --belongs-to-many=Tag --belongs-to-many=Category)} {--has-many=* : Related models for hasMany relationships (e.g., --has-many=Post)} {--has-one=* : Related models for hasOne relationships (e.g., --has-one=Profile)}';
     protected $description = 'Scaffold a full CRUD resource from a migration file, using Livewire components for views.';
 
     public function handle()
@@ -23,6 +23,35 @@ class MakeScaffoldCommand extends Command
         }
 
         $content = File::get($migrationPath);
+
+        if ($this->isPivotTable($content)) {
+            $models = $this->getModelsFromPivotMigration($content);
+
+            if (count($models) < 2) {
+                $this->error("Could not determine the two models from the pivot table migration.");
+                return 1;
+            }
+
+            $this->info("Pivot table detected, connecting models: " . implode(', ', $models));
+            $primaryModel = $this->choice("Which model would you like to scaffold the CRUD for?", $models);
+
+            $otherModel = collect($models)->first(fn($model) => $model !== $primaryModel);
+
+            $this->info("Scaffolding for '{$primaryModel}' with Many-to-Many relationship to '{$otherModel}'.");
+
+            $primaryModelTable = Str::plural(Str::snake($primaryModel));
+            $migrationFileName = "create_{$primaryModelTable}_table";
+            $migrationPath = $this->findMigrationFile($migrationFileName);
+
+            if (!$migrationPath) {
+                $this->error("Could not find the migration file for the selected model: '{$migrationFileName}.php'");
+                return 1;
+            }
+
+            $content = File::get($migrationPath);
+
+            $this->input->setOption('belongs-to-many', array_merge($this->option('belongs-to-many'), [$otherModel]));
+        }
 
         $tableName = $this->getTableNameFromMigration($content);
         if (!$tableName) {
@@ -38,10 +67,11 @@ class MakeScaffoldCommand extends Command
         $modelName = Str::studly(Str::singular($tableName));
         $resourceName = Str::kebab($tableName);
 
-        // Process relationships
         $belongsToModels = $this->option('belongs-to') ?? [];
-        $manyToManyModels = $this->option('many-to-many') ?? [];
-        $relationships = $this->processRelationships($belongsToModels, $manyToManyModels, $columns, $content);
+        $belongsToManyModels = $this->option('belongs-to-many') ?? [];
+        $hasManyModels = $this->option('has-many') ?? [];
+        $hasOneModels = $this->option('has-one') ?? [];
+        $relationships = $this->processRelationships($belongsToModels, $belongsToManyModels, $hasManyModels, $hasOneModels, $columns, $content);
 
         $this->info("Scaffolding resource for table: {$tableName}");
         $this->info("Model: {$modelName}, Controller: {$modelName}Controller, Route: {$resourceName}");
@@ -50,8 +80,16 @@ class MakeScaffoldCommand extends Command
             $this->info("BelongsTo relationships detected: " . implode(', ', array_keys($relationships['belongsTo'])));
         }
 
-        if (!empty($relationships['manyToMany'])) {
-            $this->info("ManyToMany relationships detected: " . implode(', ', array_keys($relationships['manyToMany'])));
+        if (!empty($relationships['belongsToMany'])) {
+            $this->info("BelongsToMany relationships detected: " . implode(', ', array_keys($relationships['belongsToMany'])));
+        }
+
+        if (!empty($relationships['hasMany'])) {
+            $this->info("HasMany relationships detected: " . implode(', ', array_keys($relationships['hasMany'])));
+        }
+
+        if (!empty($relationships['hasOne'])) {
+            $this->info("HasOne relationships detected: " . implode(', ', array_keys($relationships['hasOne'])));
         }
 
         $this->generateModel($modelName, $tableName, $columns, $relationships);
@@ -78,6 +116,40 @@ class MakeScaffoldCommand extends Command
         return $files[0] ?? null;
     }
 
+    protected function isPivotTable($content)
+    {
+        $foreignKeyCount = 0;
+        $foreignKeyCount += preg_match_all('/\$table->foreignId\(\'([a-zA-Z0-9_]+)\'\)/', $content);
+        $foreignKeyCount += preg_match_all('/\$table->foreign\(\'([a-zA-Z0-9_]+)\'\)/', $content);
+
+        $columnCount = count($this->getColumnsFromMigration($content));
+
+        return $foreignKeyCount >= 2 && $columnCount <= 2;
+    }
+
+    protected function getModelsFromPivotMigration($content)
+    {
+        $models = [];
+        // Padrão 1: foreignId('post_id')
+        if (preg_match_all('/\$table->foreignId\(\'([a-zA-Z0-9_]+_id)\'\)/', $content, $matches)) {
+            foreach ($matches[1] as $foreignKey) {
+                $models[] = Str::studly(str_replace('_id', '', $foreignKey));
+            }
+        }
+
+        // Padrão 2: unsignedBigInteger('post_id') -> foreign('post_id')
+        if (preg_match_all('/\$table->foreign\(\'([a-zA-Z0-9_]+_id)\'\)/', $content, $matches)) {
+            foreach ($matches[1] as $foreignKey) {
+                $modelName = Str::studly(str_replace('_id', '', $foreignKey));
+                if (!in_array($modelName, $models)) {
+                    $models[] = $modelName;
+                }
+            }
+        }
+
+        return array_unique($models);
+    }
+
     protected function getTableNameFromMigration($content)
     {
         if (preg_match("/Schema::create\('([a-zA-Z0-9_]+)'/", $content, $matches)) {
@@ -94,7 +166,6 @@ class MakeScaffoldCommand extends Command
                 $columnName = $match[2];
                 $columnType = $match[1];
 
-                // Skip system columns
                 if (!in_array($columnName, ['id', 'timestamps', 'remember_token', 'created_at', 'updated_at'])) {
                     $columns[$columnName] = $this->mapColumnTypeToInputType($columnType);
                 }
@@ -136,11 +207,13 @@ class MakeScaffoldCommand extends Command
         }
     }
 
-    protected function processRelationships($belongsToModels, $manyToManyModels, &$columns, $migrationContent)
+    protected function processRelationships($belongsToModels, $belongsToManyModels, $hasManyModels, $hasOneModels, &$columns, $migrationContent)
     {
         $relationships = [
             'belongsTo' => [],
-            'manyToMany' => []
+            'belongsToMany' => [],
+            'hasMany' => [],
+            'hasOne' => [],
         ];
 
         // 1. Processa relações belongsTo explícitas
@@ -158,17 +231,33 @@ class MakeScaffoldCommand extends Command
             ];
         }
 
-        // 2. Processa relações manyToMany explícitas
-        foreach ($manyToManyModels as $relatedModel) {
+        // 2. Processa relações belongsToMany explícitas
+        foreach ($belongsToManyModels as $relatedModel) {
             $relatedModel = Str::studly($relatedModel);
 
-            $relationships['manyToMany'][$relatedModel] = [
+            $relationships['belongsToMany'][$relatedModel] = [
                 'method_name' => Str::camel(Str::plural($relatedModel)),
                 'pivot_table' => $this->generatePivotTableName($migrationContent, $relatedModel)
             ];
         }
 
-        // 3. Detecta FKs automáticas da migration
+        // 3. Processa relações hasMany explícitas
+        foreach ($hasManyModels as $relatedModel) {
+            $relatedModel = Str::studly($relatedModel);
+            $relationships['hasMany'][$relatedModel] = [
+                'method_name' => Str::camel(Str::plural($relatedModel)),
+            ];
+        }
+
+        // 4. Processa relações hasOne explícitas
+        foreach ($hasOneModels as $relatedModel) {
+            $relatedModel = Str::studly($relatedModel);
+            $relationships['hasOne'][$relatedModel] = [
+                'method_name' => Str::camel($relatedModel),
+            ];
+        }
+
+        // 5. Detecta FKs automáticas da migration (para belongsTo)
         $this->detectForeignKeysFromMigration($migrationContent, $columns, $relationships);
 
         return $relationships;
@@ -259,15 +348,46 @@ EOT;
             }
         }
 
-        // ManyToMany relationships
-        if (!empty($relationships['manyToMany'])) {
-            foreach ($relationships['manyToMany'] as $relatedModel => $config) {
+        // BelongsToMany relationships
+        if (!empty($relationships['belongsToMany'])) {
+            foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
                 $methodName = $config['method_name'];
+                $singularRelatedModel = Str::singular($relatedModel);
                 $relationshipMethods .= <<<EOT
 
     public function {$methodName}()
     {
-        return \$this->belongsToMany(\\App\\Models\\{$relatedModel}::class, '{$config['pivot_table']}');
+        return \$this->belongsToMany(\\App\\Models\\{$singularRelatedModel}::class, '{$config['pivot_table']}');
+    }
+EOT;
+            }
+        }
+
+        // HasMany relationships
+        if (!empty($relationships['hasMany'])) {
+            foreach ($relationships['hasMany'] as $relatedModel => $config) {
+                $methodName = $config['method_name'];
+                $singularRelatedModel = Str::singular($relatedModel);
+                $relationshipMethods .= <<<EOT
+
+    public function {$methodName}()
+    {
+        return \$this->hasMany(\\App\\Models\\{$singularRelatedModel}::class);
+    }
+EOT;
+            }
+        }
+
+        // HasOne relationships
+        if (!empty($relationships['hasOne'])) {
+            foreach ($relationships['hasOne'] as $relatedModel => $config) {
+                $methodName = $config['method_name'];
+                $singularRelatedModel = Str::singular($relatedModel);
+                $relationshipMethods .= <<<EOT
+
+    public function {$methodName}()
+    {
+        return \$this->hasOne(\\App\\Models\\{$singularRelatedModel}::class);
     }
 EOT;
             }
@@ -316,7 +436,7 @@ EOT;
         // Add relationship data for views
         $relationshipImports = [];
         $relationshipVars = [];
-        $manyToManyVars = [];
+        $belongsToManyVars = [];
 
         // BelongsTo relationships
         if (!empty($relationships['belongsTo'])) {
@@ -327,19 +447,19 @@ EOT;
             }
         }
 
-        // ManyToMany relationships
-        if (!empty($relationships['manyToMany'])) {
-            foreach ($relationships['manyToMany'] as $relatedModel => $config) {
+        // BelongsToMany relationships
+        if (!empty($relationships['belongsToMany'])) {
+            foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
                 $relationshipImports[] = "use App\\Models\\{$relatedModel};";
                 $varName = Str::plural(Str::camel($relatedModel));
-                $manyToManyVars[] = "'{$varName}' => {$relatedModel}::all()";
+                $belongsToManyVars[] = "'{$varName}' => {$relatedModel}::all()";
             }
         }
 
         $relationshipData = implode("\n", array_unique($relationshipImports)) . "\n";
 
         // Combine all relationship variables
-        $allRelationshipVars = array_merge($relationshipVars, $manyToManyVars);
+        $allRelationshipVars = array_merge($relationshipVars, $belongsToManyVars);
         $createWithData = !empty($allRelationshipVars) ? ", " . implode(', ', $allRelationshipVars) : '';
         $editWithData = !empty($allRelationshipVars) ? ", " . implode(', ', $allRelationshipVars) : '';
 
@@ -375,34 +495,32 @@ EOT;
             }
         }
 
-        // ManyToMany handling
-        $manyToManySync = '';
-        if (!empty($relationships['manyToMany'])) {
-            foreach ($relationships['manyToMany'] as $relatedModel => $config) {
+        // BelongsToMany handling
+        $belongsToManySync = '';
+        if (!empty($relationships['belongsToMany'])) {
+            foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
                 $methodName = $config['method_name'];
-                $manyToManySync .= "        \${$modelVariable}->{$methodName}()->sync(\$request->input('{$methodName}', []));\n";
+                $belongsToManySync .= "        \${$modelVariable}->{$methodName}()->sync(\$request->input('{$methodName}', []));\n";
             }
         }
 
         $createCall = $hasCheckboxes ? "{$modelName}::create(\$data);" : "{$modelName}::create(\$request->all());";
         $updateCall = $hasCheckboxes ? "\${$modelVariable}->update(\$data);" : "\${$modelVariable}->update(\$request->all());";
 
-        // Add manyToMany sync to store and update
-        if (!empty($manyToManySync)) {
-            $createCall = "\${$modelVariable} = " . $createCall . "\n        " . $manyToManySync;
-            $updateCall = $updateCall . "\n        " . $manyToManySync;
+        // Add belongsToMany sync to store and update
+        if (!empty($belongsToManySync)) {
+            $createCall = "\${$modelVariable} = " . $createCall . "\n        " . $belongsToManySync;
+            $updateCall = $updateCall . "\n        " . $belongsToManySync;
         }
 
-        // CORREÇÃO PRINCIPAL: Relationship loading correto
         $relationshipLoadArray = [];
         foreach ($relationships['belongsTo'] as $config) {
             $relationshipLoadArray[] = "'{$config['method_name']}'";
         }
-        foreach ($relationships['manyToMany'] as $config) {
+        foreach ($relationships['belongsToMany'] as $config) {
             $relationshipLoadArray[] = "'{$config['method_name']}'";
         }
 
-        // CORREÇÃO: Usar with() antes de get() no index
         $relationshipLoadIndex = !empty($relationshipLoadArray) ? "::with([" . implode(', ', $relationshipLoadArray) . "])->get()" : '::all()';
         $relationshipLoadEdit = !empty($relationshipLoadArray) ? "        \${$modelVariable}->load([" . implode(', ', $relationshipLoadArray) . "]);" : '';
 
@@ -494,9 +612,9 @@ EOT;
             }
         }
 
-        // ManyToMany relationships
-        if (!empty($relationships['manyToMany'])) {
-            foreach ($relationships['manyToMany'] as $relatedModel => $config) {
+        // BelongsToMany relationships
+        if (!empty($relationships['belongsToMany'])) {
+            foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
                 $varName = Str::plural(Str::camel($relatedModel));
                 $vars[] = "\${$varName} = {$relatedModel}::all();";
             }
@@ -517,9 +635,9 @@ EOT;
             }
         }
 
-        // ManyToMany relationships
-        if (!empty($relationships['manyToMany'])) {
-            foreach ($relationships['manyToMany'] as $config) {
+        // BelongsToMany relationships
+        if (!empty($relationships['belongsToMany'])) {
+            foreach ($relationships['belongsToMany'] as $config) {
                 $varName = Str::plural($config['method_name']);
                 $vars[] = $includeQuotes ? "'{$varName}'" : "'{$varName}'";
             }
@@ -598,8 +716,8 @@ EOT;
             $formFields .= $indentation . "])\n\n";
         }
 
-        // ManyToMany relationships - Multi-select fields
-        foreach ($relationships['manyToMany'] as $relatedModel => $config) {
+        // BelongsToMany relationships - Multi-select fields
+        foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
             $label = Str::ucfirst(str_replace('_', ' ', $config['method_name']));
             $varName = Str::plural($config['method_name']);
             $formFields .= $indentation . "@livewire('select', [\n";
@@ -669,8 +787,8 @@ EOT;
             $formFields .= $indentation . "])\n\n";
         }
 
-        // ManyToMany relationships
-        foreach ($relationships['manyToMany'] as $relatedModel => $config) {
+        // BelongsToMany relationships
+        foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
             $label = Str::ucfirst(str_replace('_', ' ', $config['method_name']));
             $varName = Str::plural($config['method_name']);
             $formFields .= $indentation . "@livewire('select', [\n";

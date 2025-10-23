@@ -1,0 +1,1 @@
+// No specific JavaScript for Bootstrap theme yet.

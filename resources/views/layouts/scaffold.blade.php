@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>{{ config('app.name', 'Laravel') }} - Scaffold</title>
 
-    @vite(['resources/css/themes/' . config('design.system', 'govbr') . '.css', 'resources/js/app.js'])
+    @vite(['resources/css/themes/' . config('design.system', 'govbr') . '.css', 'resources/js/themes/' . config('design.system', 'govbr') . '.js', 'resources/js/app.js'])
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css" />
   </head>

@@ -26,3 +26,19 @@ Route::resource('categorias', App\Http\Controllers\CategoriaController::class); 
 Route::resource('produtos', App\Http\Controllers\ProdutoController::class); // gerado automaticamente pela biblioteca
 
 Route::resource('posts', App\Http\Controllers\PostController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('tags', App\Http\Controllers\TagController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('posts', App\Http\Controllers\PostController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('posts', App\Http\Controllers\PostController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('posts', App\Http\Controllers\PostController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('posts', App\Http\Controllers\PostController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('posts', App\Http\Controllers\PostController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('tags', App\Http\Controllers\TagController::class); // gerado automaticamente pela biblioteca
+
+Route::resource('tags', App\Http\Controllers\TagController::class); // gerado automaticamente pela biblioteca

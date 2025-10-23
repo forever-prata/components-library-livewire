@@ -48,7 +48,11 @@
         window.designSystem = '{{ config('design.system') }}';
     </script>
                 @php
-            $viteAssets = ['resources/css/themes/' . config('design.system') . '.css', 'resources/js/app.js'];
+            $viteAssets = [
+                'resources/css/themes/' . config('design.system') . '.css',
+                'resources/js/themes/' . config('design.system') . '.js',
+                'resources/js/app.js'
+            ];
             if (config('design.system') !== 'materialize') {
                 array_unshift($viteAssets, 'resources/css/app.css');
             }

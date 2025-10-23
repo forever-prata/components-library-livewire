@@ -1,20 +1,34 @@
 <div class="br-select">
     <div class="br-input">
-      <label for="{{ $id }}">{{ $label }}</label>
-      <input id="{{ $id }}" type="text" placeholder="Selecione o item" readonly />
-      <button class="br-button" type="button" aria-label="Exibir lista" tabindex="-1" data-trigger>
-        <i class="fas fa-angle-down" aria-hidden="true"></i>
-      </button>
+        <label for="{{ $id }}">{{ $label }}</label>
+        <input id="{{ $id }}" type="text" placeholder="{{ $placeholder }}" readonly />
+        <button class="br-button" type="button" aria-label="Exibir lista" tabindex="-1" data-trigger>
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+        </button>
     </div>
     <div class="br-list" tabindex="0">
-      @foreach($options as $value => $optionLabel)
-      <div class="br-item" tabindex="-1">
-        <div class="br-radio">
-          <input id="{{ $id . '-' . $loop->index }}" type="radio" name="{{ $name }}" value="{{ $value }}"
-            @if($wireModel) wire:model="{{ $wireModel }}" @endif @if($selected == $value) checked @endif />
-          <label for="{{ $id . '-' . $loop->index }}">{{ $optionLabel }}</label>
-        </div>
-      </div>
-      @endforeach
+        @if($multiple)
+            @foreach($options as $value => $optionLabel)
+                <div class="br-item" tabindex="-1">
+                    <div class="br-checkbox">
+                        <input id="{{ $id . '-' . $loop->index }}" type="checkbox" name="{{ $name }}[]" value="{{ $value }}"
+                               @if($wireModel) wire:model.live="{{ $wireModel }}" @endif
+                               {{ (is_array($selected) && in_array($value, $selected)) ? 'checked' : '' }} />
+                        <label for="{{ $id . '-' . $loop->index }}">{{ $optionLabel }}</label>
+                    </div>
+                </div>
+            @endforeach
+        @else
+            @foreach($options as $value => $optionLabel)
+                <div class="br-item" tabindex="-1">
+                    <div class="br-radio">
+                        <input id="{{ $id . '-' . $loop->index }}" type="radio" name="{{ $name }}" value="{{ $value }}"
+                               @if($wireModel) wire:model.live="{{ $wireModel }}" @endif
+                               {{ $selected == $value ? 'checked' : '' }} />
+                        <label for="{{ $id . '-' . $loop->index }}">{{ $optionLabel }}</label>
+                    </div>
+                </div>
+            @endforeach
+        @endif
     </div>
-  </div>
+</div>

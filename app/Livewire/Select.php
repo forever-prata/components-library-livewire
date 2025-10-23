@@ -13,8 +13,9 @@ class Select extends Component
     public ?string $placeholder = null;
     public ?string $wireModel = null;
     public $selected = null;
+    public bool $multiple = false;
 
-    public function mount(string $name, string $label, string $id, array $options = [], ?string $placeholder = null, ?string $wireModel = null, $selected = null)
+    public function mount(string $name, string $label, string $id, array $options = [], ?string $placeholder = null, ?string $wireModel = null, $selected = null, bool $multiple = false)
     {
         $this->name = $name;
         $this->label = $label;
@@ -23,6 +24,7 @@ class Select extends Component
         $this->placeholder = $placeholder ?? 'Selecione uma opção';
         $this->wireModel = $wireModel;
         $this->selected = $selected;
+        $this->multiple = $multiple;
     }
 
     public function render()
