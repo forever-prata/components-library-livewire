@@ -1,6 +1,6 @@
 <?php
 
-namespace GovbrComponentsLivewire\Livewire;
+namespace App\Livewire;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;

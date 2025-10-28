@@ -3,11 +3,24 @@
 namespace GovbrComponentsLivewire;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\File;
 
 class GovbrComponentsLivewireServiceProvider extends ServiceProvider
 {
+    protected $defer = true;
     public function boot()
     {
+        $livewirePath = __DIR__ . '/Livewire';
+        $publishable = [];
+
+        foreach (File::allFiles($livewirePath) as $file) {
+            // caminho de destino: app/Livewire/<NomeArquivo>.php
+            $destination = app_path('Livewire/' . $file->getFilename());
+            $publishable[$file->getRealPath()] = $destination;
+        }
+
+        $this->publishes($publishable, 'livewire-components');
+
         // Publicar config
         $this->publishes([
             __DIR__ . '/config/design.php' => config_path('design.php'),
@@ -29,7 +42,7 @@ class GovbrComponentsLivewireServiceProvider extends ServiceProvider
         // Registrar comandos
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \GovbrComponentsLivewire\Commands\MakeScaffoldCommand::class,
+                \GovbrComponentsLivewire\Console\Commands\MakeScaffoldCommand::class,
             ]);
         }
     }
