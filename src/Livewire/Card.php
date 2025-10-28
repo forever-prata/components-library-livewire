@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace GovbrComponentsLivewire\Livewire;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
