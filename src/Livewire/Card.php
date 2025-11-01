@@ -10,42 +10,42 @@ class Card extends Component
 {
     public mixed $data;
 
-    public string $titulo = 'Detalhes';
-    public string $classeExtra = '';
-    public array $campos = [];
-    public bool $comImagem = false;
-    public string $campoImagem = 'imagem';
-    public string $classeImagem = '';
-    public string $estiloImagem = '';
-    public bool $comAvatar = false;
-    public string $campoAvatar = 'avatar';
+    public string $title = 'Detalhes';
+    public string $extraClass = '';
+    public array $fields = [];
+    public bool $withImage = false;
+    public string $imageField = 'imagem';
+    public string $imageClass = '';
+    public string $imageStyle = '';
+    public bool $withAvatar = false;
+    public string $avatarField = 'avatar';
     public array $actionButtons = [];
     public ?string $routeBase = null;
 
     public function mount(
         mixed $data,
-        string $titulo = 'Detalhes',
-        string $classeExtra = '',
-        array $campos = [],
-        bool $comImagem = false,
-        string $campoImagem = 'imagem',
-        string $classeImagem = '',
-        string $estiloImagem = '',
-        bool $comAvatar = false,
-        string $campoAvatar = 'avatar',
+        string $title = 'Detalhes',
+        string $extraClass = '',
+        array $fields = [],
+        bool $withImage = false,
+        string $imageField = 'imagem',
+        string $imageClass = '',
+        string $imageStyle = '',
+        bool $withAvatar = false,
+        string $avatarField = 'avatar',
         array $actionButtons = [],
         ?string $routeBase = null
     ) {
         $this->data = $data;
-        $this->titulo = $titulo;
-        $this->classeExtra = $classeExtra;
-        $this->campos = $campos;
-        $this->comImagem = $comImagem;
-        $this->campoImagem = $campoImagem;
-        $this->classeImagem = $classeImagem;
-        $this->estiloImagem = $estiloImagem;
-        $this->comAvatar = $comAvatar;
-        $this->campoAvatar = $campoAvatar;
+        $this->title = $title;
+        $this->extraClass = $extraClass;
+        $this->fields = $fields;
+        $this->withImage = $withImage;
+        $this->imageField = $imageField;
+        $this->imageClass = $imageClass;
+        $this->imageStyle = $imageStyle;
+        $this->withAvatar = $withAvatar;
+        $this->avatarField = $avatarField;
         $this->actionButtons = $actionButtons;
         $this->routeBase = $routeBase;
     }
@@ -55,9 +55,9 @@ class Card extends Component
         $rawData = $this->extractData();
         $cardData = [];
 
-        if (!empty($this->campos)) {
-            foreach ($this->campos as $campo => $label) {
-                $cardData[is_numeric($campo) ? $label : $label] = data_get($rawData, is_numeric($campo) ? $label : $campo);
+        if (!empty($this->fields)) {
+            foreach ($this->fields as $field => $label) {
+                $cardData[is_numeric($field) ? $label : $label] = data_get($rawData, is_numeric($field) ? $label : $field);
             }
         } else {
             if (is_array($rawData)) {

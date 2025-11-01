@@ -6,27 +6,27 @@ use Livewire\Component;
 
 class Botao extends Component
 {
-    public string $tipo;
-    public string $tamanho;
-    public string $tipoBotao;
-    public string $classeExtra;
+    public string $type;
+    public string $size;
+    public string $buttonType;
+    public string $extraClass;
     public ?string $href;
     public ?string $action;
     public string $label;
 
     public function mount(
-        string $tipo = 'primary',
-        string $tamanho = '',
-        string $tipoBotao = 'button',
-        string $classeExtra = '',
+        string $type = 'primary',
+        string $size = '',
+        string $buttonType = 'button',
+        string $extraClass = '',
         string $href = null,
         string $action = null,
         string $label = ''
     ) {
-        $this->tipo = $tipo;
-        $this->tamanho = $tamanho;
-        $this->tipoBotao = $tipoBotao;
-        $this->classeExtra = $classeExtra;
+        $this->type = $type;
+        $this->size = $size;
+        $this->buttonType = $buttonType;
+        $this->extraClass = $extraClass;
         $this->href = $href;
         $this->action = $action;
         $this->label = $label;

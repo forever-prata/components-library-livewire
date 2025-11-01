@@ -433,35 +433,18 @@ EOT;
         $modelVariable = Str::camel($modelName);
         $modelNamespace = "App\\Models\\{$modelName}";
 
-        // Add relationship data for views
         $relationshipImports = [];
-        $relationshipVars = [];
-        $belongsToManyVars = [];
-
-        // BelongsTo relationships
         if (!empty($relationships['belongsTo'])) {
-            foreach ($relationships['belongsTo'] as $relatedModel => $config) {
+            foreach (array_keys($relationships['belongsTo']) as $relatedModel) {
                 $relationshipImports[] = "use App\\Models\\{$relatedModel};";
-                $varName = Str::plural($config['method_name']);
-                $relationshipVars[] = "'{$varName}' => {$relatedModel}::all()";
             }
         }
-
-        // BelongsToMany relationships
         if (!empty($relationships['belongsToMany'])) {
-            foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
+            foreach (array_keys($relationships['belongsToMany']) as $relatedModel) {
                 $relationshipImports[] = "use App\\Models\\{$relatedModel};";
-                $varName = Str::plural(Str::camel($relatedModel));
-                $belongsToManyVars[] = "'{$varName}' => {$relatedModel}::all()";
             }
         }
-
-        $relationshipData = implode("\n", array_unique($relationshipImports)) . "\n";
-
-        // Combine all relationship variables
-        $allRelationshipVars = array_merge($relationshipVars, $belongsToManyVars);
-        $createWithData = !empty($allRelationshipVars) ? ", " . implode(', ', $allRelationshipVars) : '';
-        $editWithData = !empty($allRelationshipVars) ? ", " . implode(', ', $allRelationshipVars) : '';
+        $relationshipData = !empty($relationshipImports) ? "\n" . implode("\n", array_unique($relationshipImports)) : '';
 
         $validationRules = [];
         foreach ($columns as $column => $type) {
@@ -470,48 +453,45 @@ EOT;
             }
         }
 
-        // Add validation for foreign keys
         foreach ($relationships['belongsTo'] as $relatedModel => $config) {
             $validationRules[] = "            '{$config['foreign_key']}' => 'required|exists:" . Str::plural(Str::snake($relatedModel)) . ",id',";
         }
-
         $validationRulesString = implode("\n", $validationRules);
 
-        $checkboxHandling = '';
+        $checkboxHandling = [];
         $hasCheckboxes = false;
         foreach ($columns as $column => $type) {
             if ($type === 'checkbox') {
                 $hasCheckboxes = true;
-                break;
+                $checkboxHandling[] = "        \$data['{$column}'] = \$request->has('{$column}');";
             }
         }
-
         if ($hasCheckboxes) {
-            $checkboxHandling = "        \$data = \$request->all();\n";
-            foreach ($columns as $column => $type) {
-                if ($type === 'checkbox') {
-                    $checkboxHandling .= "        \$data['{$column}'] = \$request->has('{$column}');\n";
-                }
-            }
+            array_unshift($checkboxHandling, "        \$data = \$request->all();");
         }
+        $checkboxHandlingString = implode("\n", $checkboxHandling);
 
-        // BelongsToMany handling
-        $belongsToManySync = '';
+        $belongsToManySync = [];
         if (!empty($relationships['belongsToMany'])) {
-            foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
+            foreach ($relationships['belongsToMany'] as $config) {
                 $methodName = $config['method_name'];
-                $belongsToManySync .= "        \${$modelVariable}->{$methodName}()->sync(\$request->input('{$methodName}', []));\n";
+                $belongsToManySync[] = "        \${$modelVariable}->{$methodName}()->sync(\$request->input('{$methodName}', []));";
             }
         }
+        $belongsToManySyncString = implode("\n", $belongsToManySync);
 
         $createCall = $hasCheckboxes ? "{$modelName}::create(\$data);" : "{$modelName}::create(\$request->all());";
-        $updateCall = $hasCheckboxes ? "\${$modelVariable}->update(\$data);" : "\${$modelVariable}->update(\$request->all());";
-
-        // Add belongsToMany sync to store and update
         if (!empty($belongsToManySync)) {
-            $createCall = "\${$modelVariable} = " . $createCall . "\n        " . $belongsToManySync;
-            $updateCall = $updateCall . "\n        " . $belongsToManySync;
+            $createCall = "\${$modelVariable} = " . rtrim($createCall, ';') . ";\n" . $belongsToManySyncString;
         }
+
+        $updateCall = $hasCheckboxes ? "\${$modelVariable}->update(\$data);" : "\${$modelVariable}->update(\$request->all());";
+        if (!empty($belongsToManySync)) {
+            $updateCall = rtrim($updateCall, ';') . ";\n" . $belongsToManySyncString;
+        }
+
+        $dataHandlingStore = !empty($checkboxHandlingString) ? $checkboxHandlingString . "\n        " . $createCall : "        " . $createCall;
+        $dataHandlingUpdate = !empty($checkboxHandlingString) ? $checkboxHandlingString . "\n        " . $updateCall : "        " . $updateCall;
 
         $relationshipLoadArray = [];
         foreach ($relationships['belongsTo'] as $config) {
@@ -522,80 +502,108 @@ EOT;
         }
 
         $relationshipLoadIndex = !empty($relationshipLoadArray) ? "::with([" . implode(', ', $relationshipLoadArray) . "])->get()" : '::all()';
-        $relationshipLoadEdit = !empty($relationshipLoadArray) ? "        \${$modelVariable}->load([" . implode(', ', $relationshipLoadArray) . "]);" : '';
+
+        $compactVarsCreate = $this->getCompactVariables($relationships);
+        $createView = $compactVarsCreate ? "view('{$tableName}.create', {$compactVarsCreate})" : "view('{$tableName}.create')";
+
+        $compactVarsEdit = $this->getCompactVariables($relationships, $modelVariable);
+        $editView = $compactVarsEdit ? "view('{$tableName}.edit', {$compactVarsEdit})" : "view('{$tableName}.edit')";
+
+        // Build method bodies dynamically
+        $createBody = [];
+        $relationshipVarsForCreate = $this->getRelationshipVariables($relationships);
+        if(!empty($relationshipVarsForCreate)) {
+            $indentedVars = "        " . str_replace("\n", "\n        ", $relationshipVarsForCreate);
+            $createBody[] = $indentedVars;
+        }
+        $createBody[] = "        return {$createView};";
+        $createBodyString = implode("\n", $createBody);
+
+        $showBody = [];
+        if (!empty($relationshipLoadArray)) {
+            $showBody[] = "        \${$modelVariable}->load([" . implode(', ', $relationshipLoadArray) . "]);";
+        }
+        $showBody[] = "        return view('{$tableName}.show', compact('{$modelVariable}'));";
+        $showBodyString = implode("\n", $showBody);
+
+        $editBody = [];
+        if (!empty($relationshipLoadArray)) {
+            $editBody[] = "        \${$modelVariable}->load([" . implode(', ', $relationshipLoadArray) . "]);";
+        }
+        $relationshipVarsForEdit = $this->getRelationshipVariables($relationships);
+        if (!empty($relationshipVarsForEdit)) {
+            $indentedVars = "        " . str_replace("\n", "\n        ", $relationshipVarsForEdit);
+            $editBody[] = $indentedVars;
+        }
+        $editBody[] = "        return {$editView}; ";
+        $editBodyString = implode("\n", array_filter($editBody));
 
         $template = <<<EOT
-    <?php
+<?php
 
-    // gerado automaticamente pela biblioteca
+// gerado automaticamente pela biblioteca
 
-    namespace App\Http\Controllers;
+namespace App\\Http\\Controllers;
 
-    use {$modelNamespace};{$relationshipData}
-    use Illuminate\Http\Request;
+use {$modelNamespace};{$relationshipData}
+use Illuminate\\Http\\Request;
 
-    class {$modelName}Controller extends Controller
+class {$modelName}Controller extends Controller
+{
+    public function index()
     {
-        public function index()
-        {
-            \$collection = {$modelName}{$relationshipLoadIndex};
-            return view('{$tableName}.index', compact('collection'));
-        }
-
-        public function create()
-        {
-            {$this->getRelationshipVariables($relationships)}
-            return view('{$tableName}.create', compact({$this->getCompactVariables($relationships)}));
-        }
-
-        public function store(Request \$request)
-        {
-            \$request->validate([
-    {$validationRulesString}
-            ]);
-
-    {$checkboxHandling}
-            {$createCall}
-
-            return redirect()->route('{$tableName}.index')
-                ->with('success', '{$modelName} criado com sucesso.');
-        }
-
-        public function show({$modelName} \${$modelVariable})
-        {
-    {$relationshipLoadEdit}
-            return view('{$tableName}.show', compact('{$modelVariable}'));
-        }
-
-        public function edit({$modelName} \${$modelVariable})
-        {
-    {$relationshipLoadEdit}
-            {$this->getRelationshipVariables($relationships)}
-            return view('{$tableName}.edit', compact('{$modelVariable}', {$this->getCompactVariables($relationships, false)}));
-        }
-
-        public function update(Request \$request, {$modelName} \${$modelVariable})
-        {
-            \$request->validate([
-    {$validationRulesString}
-            ]);
-
-    {$checkboxHandling}
-            {$updateCall}
-
-            return redirect()->route('{$tableName}.index')
-                ->with('success', '{$modelName} atualizado com sucesso.');
-        }
-
-        public function destroy({$modelName} \${$modelVariable})
-        {
-            \${$modelVariable}->delete();
-
-            return redirect()->route('{$tableName}.index')
-                ->with('success', '{$modelName} excluido com sucesso.');
-        }
+        \$collection = {$modelName}{$relationshipLoadIndex};
+        return view('{$tableName}.index', compact('collection'));
     }
-    EOT;
+
+    public function create()
+    {
+{$createBodyString}
+    }
+
+    public function store(Request \$request)
+    {
+        \$request->validate([
+{$validationRulesString}
+        ]);
+
+{$dataHandlingStore}
+
+        return redirect()->route('{$tableName}.index')
+            ->with('success', '{$modelName} criado com sucesso.');
+    }
+
+    public function show({$modelName} \${$modelVariable})
+    {
+{$showBodyString}
+    }
+
+    public function edit({$modelName} \${$modelVariable})
+    {
+{$editBodyString}
+    }
+
+    public function update(Request \$request, {$modelName} \${$modelVariable})
+    {
+        \$request->validate([
+{$validationRulesString}
+        ]);
+
+{$dataHandlingUpdate}
+
+        return redirect()->route('{$tableName}.index')
+            ->with('success', '{$modelName} atualizado com sucesso.');
+    }
+
+    public function destroy({$modelName} \${$modelVariable})
+    {
+        \${$modelVariable}->delete();
+
+        return redirect()->route('{$tableName}.index')
+            ->with('success', '{$modelName} excluido com sucesso.');
+    }
+}
+EOT;
 
         return $template;
     }
@@ -604,7 +612,6 @@ EOT;
     {
         $vars = [];
 
-        // BelongsTo relationships
         if (!empty($relationships['belongsTo'])) {
             foreach ($relationships['belongsTo'] as $relatedModel => $config) {
                 $varName = Str::plural($config['method_name']);
@@ -612,42 +619,51 @@ EOT;
             }
         }
 
-        // BelongsToMany relationships
         if (!empty($relationships['belongsToMany'])) {
             foreach ($relationships['belongsToMany'] as $relatedModel => $config) {
-                $varName = Str::plural(Str::camel($relatedModel));
+                $varName = $config['method_name'];
                 $vars[] = "\${$varName} = {$relatedModel}::all();";
             }
         }
 
-        return implode("\n        ", $vars);
+        return implode("\n", $vars);
     }
 
-    protected function getCompactVariables($relationships, $includeQuotes = true)
+    protected function getCompactVariables($relationships, $modelVariable = null)
     {
         $vars = [];
 
-        // BelongsTo relationships
+        if ($modelVariable) {
+            $vars[] = "'{$modelVariable}'";
+        }
+
         if (!empty($relationships['belongsTo'])) {
             foreach ($relationships['belongsTo'] as $config) {
                 $varName = Str::plural($config['method_name']);
-                $vars[] = $includeQuotes ? "'{$varName}'" : "'{$varName}'";
+                $vars[] = "'{$varName}'";
             }
         }
 
-        // BelongsToMany relationships
         if (!empty($relationships['belongsToMany'])) {
             foreach ($relationships['belongsToMany'] as $config) {
-                $varName = Str::plural($config['method_name']);
-                $vars[] = $includeQuotes ? "'{$varName}'" : "'{$varName}'";
+                $varName = $config['method_name'];
+                $vars[] = "'{$varName}'";
             }
         }
 
-        return implode(', ', $vars);
+        return !empty($vars) ? 'compact(' . implode(', ', $vars) . ')' : '';
     }
 
     protected function addRoute($tableName, $modelName)
     {
+        $routeContent = File::get(base_path('routes/web.php'));
+        $routePattern = "/Route::resource\('{$tableName}',.*\);/";
+
+        if (preg_match($routePattern, $routeContent)) {
+            $this->info("Route for '{$tableName}' already exists in web.php. Skipping route creation.");
+            return;
+        }
+
         $route = "\nRoute::resource('{$tableName}', App\\Http\\Controllers\\{$modelName}Controller::class); // gerado automaticamente pela biblioteca\n";
         File::append(base_path('routes/web.php'), $route);
         $this->line("Route for '{$tableName}' added to web.php.");
@@ -678,14 +694,14 @@ EOT;
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>TITLE</h1>
-            <livewire:botao tipo="primary" label="Novo" href="{{ route('TABLENAME.create') }}" />
+            <livewire:botao type="primary" label="Novo" href="{{ route('TABLENAME.create') }}" />
         </div>
 
         <livewire:table
             :collection="$collection"
-            :busca="true"
-            :selecionavel="false"
-            titulo="TITLE"
+            :search="true"
+            :selectable="false"
+            title="TITLE"
         />
     </div>
 @endsection
@@ -751,8 +767,8 @@ EOT;
             @csrf
 FORMFIELDS
             <div class="mt-4">
-                <livewire:botao tipo="primary" label="Salvar" tipoBotao="submit" />
-                <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
+                <livewire:botao type="primary" label="Salvar" buttonType="submit" />
+                <livewire:botao type="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
             </div>
         </form>
     </div>
@@ -824,8 +840,8 @@ EOT;
             @method('PUT')
 FORMFIELDS
             <div class="mt-4">
-                <livewire:botao tipo="primary" label="Atualizar" tipoBotao="submit" />
-                <livewire:botao tipo="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
+                <livewire:botao type="primary" label="Atualizar" buttonType="submit" />
+                <livewire:botao type="secondary" label="Voltar" href="{{ route('TABLENAME.index') }}" />
             </div>
         </form>
     </div>
@@ -855,7 +871,7 @@ EOT;
             <div class="col-md-8">
                 <livewire:card
                     :data="$MODELVARIABLE"
-                    titulo="Detalhes do TITLE"
+                    title="Detalhes do TITLE"
                     :routeBase="'TABLENAME'"
                 />
             </div>

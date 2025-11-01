@@ -9,42 +9,42 @@ class Table extends Component
 {
     public Collection $collection;
 
-    public string $titulo = 'Tabela';
-    public bool $busca = false;
-    public bool $selecionavel = false;
-    public bool $colapsavel = false;
-    public array $botoesAcao = [];
-    public string $classeExtra = '';
-    public string $tituloAcoes = 'Ações';
-    public bool $gerarAcoes = true;
+    public string $title = 'Tabela';
+    public bool $search = false;
+    public bool $selectable = false;
+    public bool $collapsible = false;
+    public array $actionButtons = [];
+    public string $extraClass = '';
+    public string $actionsTitle = 'Ações';
+    public bool $generateActions = true;
 
     public array $headers = [];
     public array $rows = [];
-    public array $colunas = [];
+    public array $columns = [];
 
     public function mount(
         Collection $collection,
-        string $titulo = 'Tabela',
-        bool $busca = false,
-        bool $selecionavel = false,
-        bool $colapsavel = false,
-        array $botoesAcao = [],
-        string $classeExtra = '',
-        array $colunas = [],
-        string $tituloAcoes = 'Ações',
-        bool $gerarAcoes = true
+        string $title = 'Tabela',
+        bool $search = false,
+        bool $selectable = false,
+        bool $collapsible = false,
+        array $actionButtons = [],
+        string $extraClass = '',
+        array $columns = [],
+        string $actionsTitle = 'Ações',
+        bool $generateActions = true
     )
     {
         $this->collection = $collection;
-        $this->titulo = $titulo;
-        $this->busca = $busca;
-        $this->selecionavel = $selecionavel;
-        $this->colapsavel = $colapsavel;
-        $this->botoesAcao = $botoesAcao;
-        $this->classeExtra = $classeExtra;
-        $this->colunas = $colunas;
-        $this->tituloAcoes = $tituloAcoes;
-        $this->gerarAcoes = $gerarAcoes;
+        $this->title = $title;
+        $this->search = $search;
+        $this->selectable = $selectable;
+        $this->collapsible = $collapsible;
+        $this->actionButtons = $actionButtons;
+        $this->extraClass = $extraClass;
+        $this->columns = $columns;
+        $this->actionsTitle = $actionsTitle;
+        $this->generateActions = $generateActions;
     }
 
     private function prepareData()
@@ -52,8 +52,8 @@ class Table extends Component
         if ($this->collection->isNotEmpty()) {
             $firstItem = $this->collection->first();
 
-            $this->headers = !empty($this->colunas)
-                ? array_values($this->colunas)
+            $this->headers = !empty($this->columns)
+                ? array_values($this->columns)
                 : (is_object($firstItem) && method_exists($firstItem, 'getAttributes')
                     ? array_keys($firstItem->getAttributes())
                     : array_keys((array) $firstItem)
@@ -69,9 +69,9 @@ class Table extends Component
                         ->toArray();
                 }
 
-                if ($item instanceof \Illuminate\Database\Eloquent\Model && isset($item->id) && $this->gerarAcoes) {
+                if ($item instanceof \Illuminate\Database\Eloquent\Model && isset($item->id) && $this->generateActions) {
                     $tableName = $item->getTable();
-                    $rowData[$this->tituloAcoes] = [
+                    $rowData[$this->actionsTitle] = [
                         'show' => route("{$tableName}.show", $item->id),
                         'edit' => route("{$tableName}.edit", $item->id),
                         'delete' => route("{$tableName}.destroy", $item->id),
@@ -82,9 +82,9 @@ class Table extends Component
             })->toArray();
 
             if (!empty($this->rows)) {
-                $hasActions = $this->gerarAcoes && (!empty($this->botoesAcao) || collect($this->rows)->contains(fn($row) => isset($row[$this->tituloAcoes])));
-                if ($hasActions && !in_array($this->tituloAcoes, $this->headers)) {
-                    $this->headers[] = $this->tituloAcoes;
+                $hasActions = $this->generateActions && (!empty($this->actionButtons) || collect($this->rows)->contains(fn($row) => isset($row[$this->actionsTitle])));
+                if ($hasActions && !in_array($this->actionsTitle, $this->headers)) {
+                    $this->headers[] = $this->actionsTitle;
                 }
             }
 
