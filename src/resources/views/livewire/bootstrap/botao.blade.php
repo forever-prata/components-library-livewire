@@ -2,7 +2,7 @@
 @if ($href)
 <a
     href="{{ $href }}"
-    class="btn btn-{{ $tipo }} @if($tamanho) btn-{{ $tamanho }} @endif {{ $classeExtra }}"
+    class="btn btn-{{ $type }} @if($size) btn-{{ $size }} @endif {{ $extraClass }}"
 >
     {{ $label }}
 </a>
@@ -11,8 +11,8 @@
     @if ($action)
         wire:click="{{ $action }}"
     @endif
-    type="{{ $tipoBotao }}"
-    class="btn btn-{{ $tipo }} @if($tamanho) btn-{{ $tamanho }} @endif {{ $classeExtra }}"
+    type="{{ $buttonType }}"
+    class="btn btn-{{ $type }} @if($size) btn-{{ $size }} @endif {{ $extraClass }}"
 >
     {{ $label }}
 </button>

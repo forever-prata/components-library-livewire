@@ -1,5 +1,5 @@
 <div>
-    <table class="table {{ $classeExtra }}">
+    <table class="table {{ $extraClass }}">
         <thead>
             <tr>
                 @foreach($headers as $header)
@@ -14,12 +14,12 @@
                         <td>
                             @if(is_array($cell) && isset($cell['show']))
                                 <div style="display: flex; align-items: center; gap: 5px;">
-                                    <livewire:botao tipo="secondary" tamanho="small" :href="$cell['show']" label="Detalhes" />
-                                    <livewire:botao tipo="secondary" tamanho="small" :href="$cell['edit']" label="Editar" />
+                                    <livewire:botao type="secondary" size="small" :href="$cell['show']" label="Detalhes" />
+                                    <livewire:botao type="secondary" size="small" :href="$cell['edit']" label="Editar" />
                                     <form action="{{ $cell['delete'] }}" method="POST" onsubmit="return confirm('Tem certeza?');">
                                         @csrf
                                         @method('DELETE')
-                                        <livewire:botao tipo="danger" tamanho="small" label="Excluir" tipoBotao="submit" />
+                                        <livewire:botao type="danger" size="small" label="Excluir" buttonType="submit" />
                                     </form>
                                 </div>
                             @else

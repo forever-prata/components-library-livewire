@@ -2,17 +2,17 @@
     $random = uniqid();
 @endphp
 
-<div class="br-table {{ $classeExtra }}"
-     @if($busca) data-search="data-search" @endif
-     @if($selecionavel) data-selection="data-selection" @endif
-     @if($colapsavel) data-collapse="data-collapse" @endif
+<div class="br-table {{ $extraClass }}"
+     @if($search) data-search="data-search" @endif
+     @if($selectable) data-selection="data-selection" @endif
+     @if($collapsible) data-collapse="data-collapse" @endif
      data-random="table-{{ $random }}">
 
   <div class="table-header">
     <div class="top-bar">
-      <div class="table-title">{{ $titulo }}</div>
+      <div class="table-title">{{ $title }}</div>
 
-      @if($busca)
+      @if($search)
         <div class="search-trigger">
           <button class="br-button circle" type="button" id="button-input-search-{{ $random }}" data-toggle="search"
             aria-label="Abrir busca" aria-controls="table-searchbox-{{ $random }}">
@@ -22,7 +22,7 @@
       @endif
     </div>
 
-    @if($busca)
+    @if($search)
       <div class="search-bar">
         <div class="br-input">
           <label for="table-searchbox-{{ $random }}">Buscar na tabela</label>
@@ -42,7 +42,7 @@
   <table>
     <thead>
       <tr>
-        @if($selecionavel)
+        @if($selectable)
           <th class="column-checkbox" scope="col">
             <div class="br-checkbox hidden-label">
               <input id="check-all-{{ $random }}" type="checkbox" aria-label="Selecionar tudo"/>
@@ -60,7 +60,7 @@
     <tbody>
         @foreach($rows as $i => $row)
           <tr>
-            @if($selecionavel)
+            @if($selectable)
               <td>
                 <div class="br-checkbox hidden-label">
                   <input id="check-line-{{ $i }}-{{ $random }}" type="checkbox"
@@ -75,12 +75,12 @@
             <td data-th="{{ $headers[$index] ?? '' }}">
                 @if(is_array($cell) && isset($cell['show']))
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <livewire:botao tipo="secondary" tamanho="small" :href="$cell['show']" label="Detalhes" />
-                        <livewire:botao tipo="secondary" tamanho="small" :href="$cell['edit']" label="Editar" />
+                        <livewire:botao type="secondary" size="small" :href="$cell['show']" label="Detalhes" />
+                        <livewire:botao type="secondary" size="small" :href="$cell['edit']" label="Editar" />
                         <form action="{{ $cell['delete'] }}" method="POST" onsubmit="return confirm('Tem certeza?');">
                             @csrf
                             @method('DELETE')
-                            <livewire:botao tipo="danger" tamanho="small" label="Excluir" tipoBotao="submit" />
+                            <livewire:botao type="danger" size="small" label="Excluir" buttonType="submit" />
                         </form>
                     </div>
                 @elseif(is_array($cell))
