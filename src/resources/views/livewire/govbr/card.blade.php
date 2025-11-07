@@ -6,15 +6,15 @@
     $hasActions = $hasIndexRoute || $hasEditRoute || $hasDestroyRoute;
 @endphp
 
-<div class="card-container {{ $classeExtra }}">
+<div class="card-container {{ $extraClass }}">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="card-title">{{ $titulo }}</h2>
+        <h2 class="card-title">{{ $title }}</h2>
 
         @if($hasActions)
         <div class="action-buttons">
             @if($hasIndexRoute)
             <livewire:botao
-                tipo="secondary"
+                type="secondary"
                 :href="route($routeBase . '.index')"
                 label="Voltar"
             />
@@ -22,7 +22,7 @@
 
             @if($hasEditRoute)
             <livewire:botao
-                tipo="primary"
+                type="primary"
                 :href="route($routeBase . '.edit', $itemId)"
                 label="Editar"
             />
@@ -33,9 +33,9 @@
                 @csrf
                 @method('DELETE')
                 <livewire:botao
-                    tipo="danger"
+                    type="danger"
                     label="Excluir"
-                    tipoBotao="submit"
+                    buttonType="submit"
                 />
             </form>
             @endif
@@ -45,27 +45,27 @@
 
     <div class="br-card">
         {{-- Imagem --}}
-        @if($comImagem && data_get($data, $campoImagem))
+        @if($withImage && data_get($data, $imageField))
         <div class="card-content text-center">
-            <img src="{{ data_get($data, $campoImagem) }}"
-                 alt="{{ $titulo }}"
-                 style="{{ $estiloImagem }}"
-                 class="mb-3 {{ $classeImagem }}"/>
+            <img src="{{ data_get($data, $imageField) }}"
+                 alt="{{ $title }}"
+                 style="{{ $imageStyle }}"
+                 class="mb-3 {{ $imageClass }}"/>
         </div>
         @endif
 
         {{-- Header com Avatar --}}
-        @if($comAvatar && data_get($data, $campoAvatar))
+        @if($withAvatar && data_get($data, $avatarField))
         <div class="card-header">
             <div class="d-flex align-items-center">
-                <span class="br-avatar" title="{{ data_get($data, 'nome') ?? data_get($data, 'name') ?? $titulo }}">
+                <span class="br-avatar" title="{{ data_get($data, 'nome') ?? data_get($data, 'name') ?? $title }}">
                     <span class="content">
-                        <img src="{{ data_get($data, $campoAvatar) }}"/>
+                        <img src="{{ data_get($data, $avatarField) }}"/>
                     </span>
                 </span>
                 <div class="ml-3">
                     <div class="text-weight-semi-bold text-up-02">
-                        {{ data_get($data, 'nome') ?? data_get($data, 'name') ?? $titulo }}
+                        {{ data_get($data, 'nome') ?? data_get($data, 'name') ?? $title }}
                     </div>
                     @if(data_get($data, 'cargo') || data_get($data, 'position'))
                     <div>{{ data_get($data, 'cargo') ?? data_get($data, 'position') }}</div>
@@ -88,12 +88,18 @@
                                     {{ $label }}:
                                 </strong>
                                 <span class="field-value">
-                                    @if(is_bool($value))
+                                    @if(is_array($value))
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach($value as $item)
+                                                <li>{{ $item }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @elseif(is_bool($value))
                                         {{ $value ? 'Sim' : 'Não' }}
                                     @elseif($value instanceof \DateTime)
                                         {{ $value->format('d/m/Y H:i') }}
                                     @else
-                                        {{ $value }}
+                                        {{ $value ?? 'N/A' }}
                                     @endif
                                 </span>
                             </div>
@@ -120,7 +126,7 @@
 
                     @if(\Illuminate\Support\Facades\Route::has($routeName))
                         <livewire:botao
-                            tipo="secondary"
+                            type="secondary"
                             :href="route($routeName, $routeParams)"
                             :label="$action"
                         />

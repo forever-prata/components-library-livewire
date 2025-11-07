@@ -50,45 +50,40 @@ class Card extends Component
         $this->routeBase = $routeBase;
     }
 
-    public function getCardData(): array
+    public function getProcessedData(): array
     {
-        $rawData = $this->extractData();
-        $cardData = [];
+        if (!$this->data instanceof Model) {
+            $data = is_object($this->data) ? (array)$this->data : $this->data;
+            return array_filter($data);
+        }
 
-        if (!empty($this->fields)) {
-            foreach ($this->fields as $field => $label) {
-                $cardData[is_numeric($field) ? $label : $label] = data_get($rawData, is_numeric($field) ? $label : $field);
-            }
-        } else {
-            if (is_array($rawData)) {
-                $cardData = $rawData;
-            } elseif (is_object($rawData)) {
-                $cardData = (array) $rawData;
-            }
+        $modelData = $this->data;
+        $processedData = [];
 
-            $formattedData = [];
-            foreach ($cardData as $key => $value) {
-                if (!is_array($value) && !is_object($value)) {
-                    $formattedData[ucfirst(str_replace('_', ' ', $key))] = $value;
+        // Process attributes
+        foreach ($modelData->getAttributes() as $key => $value) {
+            if (!in_array($key, $modelData->getHidden()) && $key !== 'id' && !str_ends_with($key, '_id')) {
+                $processedData[ucfirst(str_replace('_', ' ', $key))] = $value;
+            }
+        }
+
+        // Process relations
+        foreach ($modelData->getRelations() as $relationName => $relation) {
+            $displayName = ucfirst(str_replace('_', ' ', $relationName));
+
+            if ($relation instanceof Collection) {
+                if ($relation->isNotEmpty()) {
+                    $items = $relation->map(function ($item) {
+                        return $item->name ?? $item->nome ?? $item->title ?? 'ID: ' . $item->id;
+                    })->all();
+                    $processedData[$displayName] = $items;
                 }
+            } elseif ($relation instanceof Model) {
+                $processedData[$displayName] = $relation->name ?? $relation->nome ?? $relation->title ?? 'ID: ' . $relation->id;
             }
-            $cardData = $formattedData;
         }
 
-        return array_filter($cardData);
-    }
-
-    public function extractData(): array
-    {
-        if ($this->data instanceof Model) {
-            return $this->data->toArray();
-        } elseif ($this->data instanceof Collection) {
-            return $this->data->first()?->toArray() ?? [];
-        } elseif (is_object($this->data)) {
-            return (array) $this->data;
-        }
-
-        return $this->data;
+        return $processedData;
     }
 
     public function getId(): mixed
@@ -116,7 +111,7 @@ class Card extends Component
     public function render()
     {
         $theme = config('design.system', 'govbr');
-        $cardData = $this->getCardData();
+        $cardData = $this->getProcessedData();
         $routeBase = $this->getRouteBase();
         $itemId = $this->getId();
 

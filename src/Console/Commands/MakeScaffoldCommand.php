@@ -94,8 +94,8 @@ class MakeScaffoldCommand extends Command
 
         $this->generateModel($modelName, $tableName, $columns, $relationships);
         $this->generateController($modelName, $tableName, $columns, $relationships);
-        $this->addRoute($tableName, $modelName);
         $this->generateViews($tableName, $columns, $relationships);
+        $this->addRoute($tableName, $modelName);
 
         $this->info("CRUD for '{$modelName}' scaffolded successfully!");
         $this->info("Remember to run 'php artisan migrate' if you haven't already.");
