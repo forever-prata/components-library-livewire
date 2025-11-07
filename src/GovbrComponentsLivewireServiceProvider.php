@@ -37,6 +37,11 @@ class GovbrComponentsLivewireServiceProvider extends ServiceProvider
             __DIR__ . '/resources/js/themes' => resource_path('js/themes'),
         ], 'themes');
 
+        // Publicar layout
+        $this->publishes([
+            __DIR__ . '/resources/views/layouts/scaffold.blade.php' => resource_path('views/layouts/scaffold.blade.php'),
+        ], 'layouts');
+
         $this->loadViewsFrom(__DIR__ . '/resources/views', 'govbr-components-livewire');
 
         // Registrar comandos

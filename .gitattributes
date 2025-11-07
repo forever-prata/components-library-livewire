@@ -1,3 +1,25 @@
+/.github export-ignore
+/app export-ignore
+/bootstrap export-ignore
+/config export-ignore
+/database export-ignore
+/public export-ignore
+/resources export-ignore
+/routes export-ignore
+/storage export-ignore
+/tests export-ignore
+/vendor export-ignore
+/node_modules export-ignore
+.editorconfig export-ignore
+.env.example export-ignore
+.gitignore export-ignore
+artisan export-ignore
+composer.lock export-ignore
+package-lock.json export-ignore
+package.json export-ignore
+phpunit.xml export-ignore
+vite.config.js export-ignore
+
 * text=auto eol=lf
 
 *.blade.php diff=html
